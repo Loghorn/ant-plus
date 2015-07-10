@@ -1,6 +1,6 @@
 {
   "name": "ant-plus",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "A node module for ANT+",
   "main": "ant-plus.js",
   "scripts": {
@@ -29,8 +29,9 @@
     "del": "^1.2.0"
   },
   "files": [
-    "./",
-    "src/"
+    "ant-plus.js",
+    "src/",
+    "build/"
   ],
   "directories": {
     "example": "./sample",
