@@ -611,7 +611,7 @@ class BaseSensor extends events.EventEmitter {
 		}
 	}
 
-	write(data: Buffer) {
+	protected write(data: Buffer) {
 		this.stick.write(data);
 	}
 

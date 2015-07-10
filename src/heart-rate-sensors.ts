@@ -115,7 +115,7 @@ export class HeartRateSensor extends Ant.AntPlusSensor {
 		}
 	}
 
-	DecodeDefaultHRM(pucPayload: Buffer) {
+	private DecodeDefaultHRM(pucPayload: Buffer) {
 		// decode the measurement time data (two bytes)
 		this.state.BeatTime = pucPayload.readUInt16LE(0);
 		// decode the measurement count data
@@ -220,7 +220,7 @@ export class HeartRateScanner extends Ant.AntPlusScanner {
 		}
 	}
 
-	DecodeDefaultHRM(deviceId: number, pucPayload: Buffer) {
+	private DecodeDefaultHRM(deviceId: number, pucPayload: Buffer) {
 		// decode the measurement time data (two bytes)
 		this.states[deviceId].BeatTime = pucPayload.readUInt16LE(0);
 		// decode the measurement count data
