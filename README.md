@@ -85,6 +85,10 @@ The maximum number of channels that this stick supports; valid only after startu
 
 ####methods
 
+#####is_present()
+
+Checks if the stick is present. Returns true if it is, false otherwise.
+
 #####open()
 
 Tries to open the stick. Returns false on failure.

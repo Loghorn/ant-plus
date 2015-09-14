@@ -284,6 +284,10 @@ class USBDriver extends events.EventEmitter {
 		this.usb.setDebugLevel(dbgLevel);
 	}
 
+	is_present(): boolean {
+		return this.usb.findByIds(this.idVendor, this.idProduct);
+	}
+
 	open(): boolean {
 		this.device = this.usb.findByIds(this.idVendor, this.idProduct);
 		if (!this.device) {
