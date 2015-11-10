@@ -299,6 +299,10 @@ class USBDriver extends events.EventEmitter {
 		this.inEp = this.iface.endpoints[0];
 
 		this.inEp.on('data', (data: Buffer) => {
+			if (!data.length) {
+				return;
+			}
+
 			if (this.leftover) {
 				data = Buffer.concat([this.leftover, data]);
 				this.leftover = null;

@@ -1,6 +1,6 @@
 var Ant = require('../ant-plus');
 
-var stick = new Ant.GarminStick3;
+var stick = new Ant.GarminStick2;
 
 var sensor1 = new Ant.HeartRateSensor(stick);
 

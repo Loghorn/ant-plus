@@ -1,6 +1,6 @@
 {
   "name": "ant-plus",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "A node module for ANT+",
   "main": "ant-plus.js",
   "scripts": {
@@ -17,7 +17,7 @@
   },
   "license": "MIT",
   "dependencies": {
-    "usb": "^1.0.6"
+    "usb": "^1.1.0"
   },
   "devDependencies": {
     "gulp": "^3.9.0",
