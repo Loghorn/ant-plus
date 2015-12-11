@@ -1,7 +1,8 @@
 /* global HeartRateSensor */
-var Ant = require('./build/ant.js');
-var HRS = require('./build/heart-rate-sensors.js');
-var SSD = require('./build/stride-speed-distance-sensors.js');
+var Ant = require('./build/ant');
+var HRS = require('./build/heart-rate-sensors');
+var SSD = require('./build/stride-speed-distance-sensors');
+var SC = require('./build/speed-cadence-sensors');
 
 module.exports = {
     GarminStick2: Ant.GarminStick2,
@@ -10,4 +11,5 @@ module.exports = {
 	HeartRateScanner: HRS.HeartRateScanner,
 	StrideSpeedDistanceSensor: SSD.StrideSpeedDistanceSensor,
 	StrideSpeedDistanceScanner: SSD.StrideSpeedDistanceScanner,
+  SpeedCadenceSensor: SC.SpeedCadenceSensor
 };

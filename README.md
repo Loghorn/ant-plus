@@ -157,5 +157,34 @@ Fired after the sensor is correctly detached.
 
 Fired when new heartbeat data is received.
 
+###SpeedCadenceSensor
+
+#####scan()
+
+Attaches the sensors and starts scanning for data from every devices in range.
+
+#####detach()
+
+Detaches the sensor.
+
+####events
+
+#####attached
+
+Fired after the sensor is correctly attached.
+
+#####detached
+
+Fired after the sensor is correctly detached.
+
+#####speedData
+
+Fired when a new wheel speed is calculated
+
+#####cadenceData
+
+Fired when a new pedal cadence is calculated
+
 ###StrideSpeedDistanceSensor
 ###StrideSpeedDistanceScanner
+
