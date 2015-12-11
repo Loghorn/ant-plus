@@ -159,13 +159,17 @@ Fired when new heartbeat data is received.
 
 ###SpeedCadenceSensor
 
-#####scan()
+#####attach(channel, deviceId)
 
-Attaches the sensors and starts scanning for data from every devices in range.
+Attaches the sensor, using the specified channel and deviceId (use 0 to connect to the first device found).
 
 #####detach()
 
 Detaches the sensor.
+
+####setWheelCircumference(circumferenceInMeters)
+
+Calibrates the speed sensor. Defaults to an ~ 700c wheel, 2.118
 
 ####events
 
