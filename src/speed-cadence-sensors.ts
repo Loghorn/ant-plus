@@ -52,8 +52,9 @@ export class SpeedCadenceSensor extends Ant.AntPlusSensor {
 
     switch (type) {
       case Constants.MESSAGE_CHANNEL_BROADCAST_DATA: {
-        if (this.state.DeviceID === 0) {
-          return;  //for now, let's not use the data
+        if (this.deviceID === 0) {
+          this.write(Messages.requestMessage(this.channel, Constants.MESSAGE_CHANNEL_ID));
+          console.log('sent broadcast_data out');
         }
 
         //get old state for calculating cumulative values
@@ -104,6 +105,13 @@ export class SpeedCadenceSensor extends Ant.AntPlusSensor {
           }
         }
         break;
+      }
+      case Constants.MESSAGE_CHANNEL_ID: {
+        console.log(`received message_channel_id`);
+        this.deviceID = data.readUInt16LE(Messages.BUFFER_INDEX_MSG_DATA);
+        console.log(this.deviceID);
+        this.transmissionType = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 3);
+        this.state.DeviceID = this.deviceID;
       }
     }
   }
