@@ -105,11 +105,6 @@ export class SpeedCadenceSensor extends Ant.AntPlusSensor {
         }
         break;
       }
-      case Constants.CHANNEL_TYPE_ONEWAY_RECEIVE: {
-        this.deviceID = data.readUInt16LE(Messages.BUFFER_INDEX_MSG_DATA);
-        this.transmissionType = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 2);
-        this.state.DeviceID = this.deviceID;
-      }
     }
   }
 
