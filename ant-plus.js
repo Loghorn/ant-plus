@@ -11,5 +11,6 @@ module.exports = {
 	HeartRateScanner: HRS.HeartRateScanner,
 	StrideSpeedDistanceSensor: SSD.StrideSpeedDistanceSensor,
 	StrideSpeedDistanceScanner: SSD.StrideSpeedDistanceScanner,
-  SpeedCadenceSensor: SC.SpeedCadenceSensor
+  SpeedCadenceSensor: SC.SpeedCadenceSensor,
+  SpeedCadenceScanner: SC.SpeedCadenceScanner
 };
