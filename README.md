@@ -41,7 +41,7 @@ sensor.on('hbdata', function (data) {
 
 stick.on('startup', function () {
 	sensor.attach(0, 0);
-);
+});
 ```
 
 #### Open stick
