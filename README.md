@@ -157,5 +157,38 @@ Fired after the sensor is correctly detached.
 
 Fired when new heartbeat data is received.
 
+###SpeedCadenceSensor
+
+#####attach(channel, deviceId)
+
+Attaches the sensor, using the specified channel and deviceId (use 0 to connect to the first device found).
+
+#####detach()
+
+Detaches the sensor.
+
+####setWheelCircumference(circumferenceInMeters)
+
+Calibrates the speed sensor. Defaults to an ~ 700c wheel, 2.118
+
+####events
+
+#####attached
+
+Fired after the sensor is correctly attached.
+
+#####detached
+
+Fired after the sensor is correctly detached.
+
+#####speedData
+
+Fired when a new wheel speed is calculated
+
+#####cadenceData
+
+Fired when a new pedal cadence is calculated
+
 ###StrideSpeedDistanceSensor
 ###StrideSpeedDistanceScanner
+
