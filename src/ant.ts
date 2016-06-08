@@ -18,6 +18,7 @@ export enum Constants {
 	MESSAGE_TX_POWER = 0x47,
 	MESSAGE_PROXIMITY_SEARCH = 0x71,
 	MESSAGE_ENABLE_RX_EXT = 0x66,
+	MESSAGE_LIB_CONFIG = 0x6E,
 	MESSAGE_CHANNEL_OPEN_RX_SCAN = 0x5B,
 
 	// Notification messages
@@ -111,6 +112,7 @@ export class Messages {
 	static BUFFER_INDEX_MSG_TYPE = 2;
 	static BUFFER_INDEX_CHANNEL_NUM = 3;
 	static BUFFER_INDEX_MSG_DATA = 4;
+	static BUFFER_INDEX_EXT_MSG_BEGIN = 12;
 
 	static resetSystem() {
 		var payload = [];
@@ -198,6 +200,13 @@ export class Messages {
 		return this.buildMessage(payload, Constants.MESSAGE_ENABLE_RX_EXT);
 	}
 
+	static libConfig(how: number) {
+		var payload = [];
+		payload = payload.concat(this.intToLEHexArray(0));
+		payload = payload.concat(this.intToLEHexArray(how));
+		return this.buildMessage(payload, Constants.MESSAGE_LIB_CONFIG);
+	}
+
 	static openRxScan() {
 		var payload = [];
 		payload = payload.concat(this.intToLEHexArray(0));
@@ -277,6 +286,7 @@ class USBDriver extends events.EventEmitter {
 	private attachedSensors: BaseSensor[] = [];
 
 	maxChannels: number = 0;
+	canScan: boolean = false;
 
 	constructor(private idVendor: number, private idProduct: number, dbgLevel = 0) {
 		super();
@@ -420,7 +430,8 @@ class USBDriver extends events.EventEmitter {
 		if (messageID === Constants.MESSAGE_STARTUP) {
 			this.write(Messages.requestMessage(0, Constants.MESSAGE_CAPABILITIES));
 		} else if (messageID === Constants.MESSAGE_CAPABILITIES) {
-			this.maxChannels = data.readUInt8(4);
+			this.maxChannels = data.readUInt8(3);
+			this.canScan = (data.readUInt8(7) & 0x06) === 0x06;
 			this.write(Messages.setNetworkKey());
 		} else if (messageID === Constants.MESSAGE_CHANNEL_EVENT && data.readUInt8(4) === Constants.MESSAGE_NETWORK_KEY) {
 			this.emit('startup', data);
@@ -463,6 +474,10 @@ class BaseSensor extends events.EventEmitter {
 			throw 'already attached';
 		}
 
+		if (!this.stick.canScan) {
+			throw 'stick cannot scan';
+		}
+
 		var channel = 0;
 
 		var onStatus = (status) => {
@@ -489,6 +504,10 @@ class BaseSensor extends events.EventEmitter {
 					break;
 				}
 				case Constants.MESSAGE_ENABLE_RX_EXT: {
+					this.write(Messages.libConfig(0xC0));
+					break;
+				}
+				case Constants.MESSAGE_LIB_CONFIG: {
 					this.write(Messages.openRxScan());
 					break;
 				}

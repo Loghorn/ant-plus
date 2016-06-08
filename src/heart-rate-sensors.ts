@@ -21,6 +21,13 @@ class HeartRateSensorState {
 	SwVersion: number;
 	ModelNum: number;
 	PreviousBeat: number;
+	Rssi: number;
+	Threshold: number;
+}
+
+class HeartRateScannerState extends HeartRateSensorState {
+	Rssi: number;
+	Threshold: number;
 }
 
 enum PageState { INIT_PAGE, STD_PAGE, EXT_PAGE }
@@ -138,7 +145,7 @@ export class HeartRateScanner extends Ant.AntPlusScanner {
 		super.scan('receive');
 	}
 
-    states: { [id: number]: HeartRateSensorState } = {};
+	states: { [id: number]: HeartRateScannerState } = {};
 
 	private oldPage: number;
 	private pageState: PageState = PageState.INIT_PAGE;
@@ -146,23 +153,27 @@ export class HeartRateScanner extends Ant.AntPlusScanner {
 	private static TOGGLE_MASK = 0x80;
 
 	decodeData(data: Buffer) {
-		var msglen = data.readUInt8(Messages.BUFFER_INDEX_MSG_LEN);
-
-		var extMsgBegin = msglen - 2;
-		if (data.readUInt8(extMsgBegin) !== 0x80) {
+		if (!(data.readUInt8(Messages.BUFFER_INDEX_EXT_MSG_BEGIN) & 0x80)) {
 			console.log('wrong message format');
 			return;
 		}
 
-		var deviceId = data.readUInt16LE(extMsgBegin + 1);
-		var deviceType = data.readUInt8(extMsgBegin + 3);
+		let deviceId = data.readUInt16LE(Messages.BUFFER_INDEX_EXT_MSG_BEGIN + 1);
+		let deviceType = data.readUInt8(Messages.BUFFER_INDEX_EXT_MSG_BEGIN + 3);
 
 		if (deviceType !== HeartRateScanner.deviceType) {
 			return;
 		}
 
 		if (!this.states[deviceId]) {
-			this.states[deviceId] = new HeartRateSensorState(deviceId);
+			this.states[deviceId] = new HeartRateScannerState(deviceId);
+		}
+
+		if (data.readUInt8(Messages.BUFFER_INDEX_EXT_MSG_BEGIN) & 0x40) {
+			if (data.readUInt8(Messages.BUFFER_INDEX_EXT_MSG_BEGIN + 5) === 0x20) {
+				this.states[deviceId].Rssi = data.readInt8(Messages.BUFFER_INDEX_EXT_MSG_BEGIN + 6);
+				this.states[deviceId].Threshold = data.readInt8(Messages.BUFFER_INDEX_EXT_MSG_BEGIN + 7);
+			}
 		}
 
 		switch (data.readUInt8(Messages.BUFFER_INDEX_MSG_TYPE)) {
@@ -170,7 +181,7 @@ export class HeartRateScanner extends Ant.AntPlusScanner {
 			case Constants.MESSAGE_CHANNEL_ACKNOWLEDGED_DATA:
 			case Constants.MESSAGE_CHANNEL_BURST_DATA:
 				{
-					var page = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA);
+					let page = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA);
 					if (this.pageState === PageState.INIT_PAGE) {
 						this.pageState = PageState.STD_PAGE; // change the state to STD_PAGE and allow the checking of old and new pages
 						// decode with pages if the page byte or toggle bit has changed

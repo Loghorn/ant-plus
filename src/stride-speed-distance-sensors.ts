@@ -25,6 +25,11 @@ class StrideSpeedDistanceSensorState {
 	Calories: number;
 }
 
+class StrideSpeedDistanceScanState extends StrideSpeedDistanceSensorState {
+	Rssi: number;
+	Threshold: number;
+}
+
 enum PageState { INIT_PAGE, STD_PAGE, EXT_PAGE }
 
 export class StrideSpeedDistanceSensor extends Ant.AntPlusSensor {
@@ -105,26 +110,30 @@ export class StrideSpeedDistanceScanner extends Ant.AntPlusScanner {
 		super.scan('receive');
 	}
 
-    states: { [id: number]: StrideSpeedDistanceSensorState } = {};
+	states: { [id: number]: StrideSpeedDistanceScanState } = {};
 
 	decodeData(data: Buffer) {
-		var msglen = data.readUInt8(Messages.BUFFER_INDEX_MSG_LEN);
-
-		var extMsgBegin = msglen - 2;
-		if (data.readUInt8(extMsgBegin) !== 0x80) {
+		if (!(data.readUInt8(Messages.BUFFER_INDEX_EXT_MSG_BEGIN) & 0x80)) {
 			console.log('wrong message format');
 			return;
 		}
 
-		var deviceId = data.readUInt16LE(extMsgBegin + 1);
-		var deviceType = data.readUInt8(extMsgBegin + 3);
+		let deviceId = data.readUInt16LE(Messages.BUFFER_INDEX_EXT_MSG_BEGIN + 1);
+		let deviceType = data.readUInt8(Messages.BUFFER_INDEX_EXT_MSG_BEGIN + 3);
 
 		if (deviceType !== StrideSpeedDistanceScanner.deviceType) {
 			return;
 		}
 
 		if (!this.states[deviceId]) {
-			this.states[deviceId] = new StrideSpeedDistanceSensorState(deviceId);
+			this.states[deviceId] = new StrideSpeedDistanceScanState(deviceId);
+		}
+
+		if (data.readUInt8(Messages.BUFFER_INDEX_EXT_MSG_BEGIN) & 0x40) {
+			if (data.readUInt8(Messages.BUFFER_INDEX_EXT_MSG_BEGIN + 5) === 0x20) {
+				this.states[deviceId].Rssi = data.readInt8(Messages.BUFFER_INDEX_EXT_MSG_BEGIN + 6);
+				this.states[deviceId].Threshold = data.readInt8(Messages.BUFFER_INDEX_EXT_MSG_BEGIN + 7);
+			}
 		}
 
 		switch (data.readUInt8(Messages.BUFFER_INDEX_MSG_TYPE)) {
@@ -132,7 +141,7 @@ export class StrideSpeedDistanceScanner extends Ant.AntPlusScanner {
 			case Constants.MESSAGE_CHANNEL_ACKNOWLEDGED_DATA:
 			case Constants.MESSAGE_CHANNEL_BURST_DATA:
 				{
-					var page = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA);
+					let page = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA);
 					if (page === 1) {
 						this.states[deviceId].TimeFractional = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 1);
 						this.states[deviceId].TimeInteger = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 2);
