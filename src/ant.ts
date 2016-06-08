@@ -108,27 +108,27 @@ export enum Constants {
 }
 
 export class Messages {
-	static BUFFER_INDEX_MSG_LEN = 1;
-	static BUFFER_INDEX_MSG_TYPE = 2;
-	static BUFFER_INDEX_CHANNEL_NUM = 3;
-	static BUFFER_INDEX_MSG_DATA = 4;
-	static BUFFER_INDEX_EXT_MSG_BEGIN = 12;
+	static BUFFER_INDEX_MSG_LEN: number = 1;
+	static BUFFER_INDEX_MSG_TYPE: number = 2;
+	static BUFFER_INDEX_CHANNEL_NUM: number = 3;
+	static BUFFER_INDEX_MSG_DATA: number = 4;
+	static BUFFER_INDEX_EXT_MSG_BEGIN: number = 12;
 
-	static resetSystem() {
-		var payload = [];
+	static resetSystem(): Buffer {
+		let payload: number[] = [];
 		payload.push(0x00);
 		return this.buildMessage(payload, Constants.MESSAGE_SYSTEM_RESET);
 	}
 
-	static requestMessage(channel: number, messageID: number) {
-		var payload = [];
+	static requestMessage(channel: number, messageID: number): Buffer {
+		let payload: number[] = [];
 		payload = payload.concat(this.intToLEHexArray(channel));
 		payload.push(messageID);
 		return this.buildMessage(payload, Constants.MESSAGE_CHANNEL_REQUEST);
 	}
 
-	static setNetworkKey() {
-		var payload = [];
+	static setNetworkKey(): Buffer {
+		let payload: number[] = [];
 		payload.push(Constants.DEFAULT_NETWORK_NUMBER);
 		payload.push(0xB9);
 		payload.push(0xA5);
@@ -141,8 +141,8 @@ export class Messages {
 		return this.buildMessage(payload, Constants.MESSAGE_NETWORK_KEY);
 	}
 
-	static assignChannel(channel: number, type = 'receive') {
-		var payload = [];
+	static assignChannel(channel: number, type = 'receive'): Buffer {
+		let payload: number[] = [];
 		payload = payload.concat(this.intToLEHexArray(channel));
 		if (type === 'receive') {
 			payload.push(Constants.CHANNEL_TYPE_TWOWAY_RECEIVE);
@@ -163,8 +163,8 @@ export class Messages {
 		return this.buildMessage(payload, Constants.MESSAGE_CHANNEL_ASSIGN);
 	}
 
-	static setDevice(channel: number, deviceID: number, deviceType: number, transmissionType: number) {
-		var payload = [];
+	static setDevice(channel: number, deviceID: number, deviceType: number, transmissionType: number): Buffer {
+		let payload: number[] = [];
 		payload = payload.concat(this.intToLEHexArray(channel));
 		payload = payload.concat(this.intToLEHexArray(deviceID, 2));
 		payload = payload.concat(this.intToLEHexArray(deviceType));
@@ -172,68 +172,68 @@ export class Messages {
 		return this.buildMessage(payload, Constants.MESSAGE_CHANNEL_ID);
 	}
 
-	static searchChannel(channel: number, timeout: number) {
-		var payload = [];
+	static searchChannel(channel: number, timeout: number): Buffer {
+		let payload: number[] = [];
 		payload = payload.concat(this.intToLEHexArray(channel));
 		payload = payload.concat(this.intToLEHexArray(timeout));
 		return this.buildMessage(payload, Constants.MESSAGE_CHANNEL_SEARCH_TIMEOUT);
 	}
 
-	static setPeriod(channel: number, period: number) {
-		var payload = [];
+	static setPeriod(channel: number, period: number): Buffer {
+		let payload: number[] = [];
 		payload = payload.concat(this.intToLEHexArray(channel));
 		payload = payload.concat(this.intToLEHexArray(period));
 		return this.buildMessage(payload, Constants.MESSAGE_CHANNEL_PERIOD);
 	}
 
-	static setFrequency(channel: number, frequency: number) {
-		var payload = [];
+	static setFrequency(channel: number, frequency: number): Buffer {
+		let payload: number[] = [];
 		payload = payload.concat(this.intToLEHexArray(channel));
 		payload = payload.concat(this.intToLEHexArray(frequency));
 		return this.buildMessage(payload, Constants.MESSAGE_CHANNEL_FREQUENCY);
 	}
 
-	static setRxExt() {
-		var payload = [];
+	static setRxExt(): Buffer {
+		let payload: number[] = [];
 		payload = payload.concat(this.intToLEHexArray(0));
 		payload = payload.concat(this.intToLEHexArray(1));
 		return this.buildMessage(payload, Constants.MESSAGE_ENABLE_RX_EXT);
 	}
 
-	static libConfig(how: number) {
-		var payload = [];
+	static libConfig(how: number): Buffer {
+		let payload: number[] = [];
 		payload = payload.concat(this.intToLEHexArray(0));
 		payload = payload.concat(this.intToLEHexArray(how));
 		return this.buildMessage(payload, Constants.MESSAGE_LIB_CONFIG);
 	}
 
-	static openRxScan() {
-		var payload = [];
+	static openRxScan(): Buffer {
+		let payload: number[] = [];
 		payload = payload.concat(this.intToLEHexArray(0));
 		payload = payload.concat(this.intToLEHexArray(1));
 		return this.buildMessage(payload, Constants.MESSAGE_CHANNEL_OPEN_RX_SCAN);
 	}
 
-	static openChannel(channel: number) {
-		var payload = [];
+	static openChannel(channel: number): Buffer {
+		let payload: number[] = [];
 		payload = payload.concat(this.intToLEHexArray(channel));
 		return this.buildMessage(payload, Constants.MESSAGE_CHANNEL_OPEN);
 	}
 
-	static closeChannel(channel: number) {
-		var payload = [];
+	static closeChannel(channel: number): Buffer {
+		let payload: number[] = [];
 		payload = payload.concat(this.intToLEHexArray(channel));
 		return this.buildMessage(payload, Constants.MESSAGE_CHANNEL_CLOSE);
 	}
 
-	static unassignChannel(channel: number) {
-		var payload = [];
+	static unassignChannel(channel: number): Buffer {
+		let payload: number[] = [];
 		payload = payload.concat(this.intToLEHexArray(channel));
 		return this.buildMessage(payload, Constants.MESSAGE_CHANNEL_UNASSIGN);
 	}
 
-	static buildMessage(payload = [], msgID = 0x00) {
-		var m = [];
+	static buildMessage(payload: number[] = [], msgID = 0x00): Buffer {
+		let m: number[] = [];
 		m.push(Constants.MESSAGE_TX_SYNC);
 		m.push(payload.length);
 		m.push(msgID);
@@ -244,11 +244,11 @@ export class Messages {
 		return new Buffer(m);
 	}
 
-	static intToLEHexArray(int: number, numBytes = 1) {
+	static intToLEHexArray(int: number, numBytes = 1): number[] {
 		numBytes = numBytes || 1;
-		var a = [];
-		var b = new Buffer(this.decimalToHex(int, numBytes * 2), 'hex');
-		var i = b.length - 1;
+		let a: number[] = [];
+		let b = new Buffer(this.decimalToHex(int, numBytes * 2), 'hex');
+		let i = b.length - 1;
 		while (i >= 0) {
 			a.push(b[i]);
 			i--;
@@ -256,8 +256,8 @@ export class Messages {
 		return a;
 	}
 
-	static decimalToHex(d: number, numDigits: number) {
-		var hex = Number(d).toString(16);
+	static decimalToHex(d: number, numDigits: number): string {
+		let hex = Number(d).toString(16);
 		numDigits = numDigits || 2;
 		while (hex.length < numDigits) {
 			hex = '0' + hex;
@@ -266,8 +266,8 @@ export class Messages {
 		return hex;
 	}
 
-	static getChecksum(message: any[]) {
-		var checksum = 0;
+	static getChecksum(message: any[]): number {
+		let checksum = 0;
 		message.forEach((byte) => {
 			checksum = (checksum ^ byte) % 0xFF;
 		});
@@ -314,27 +314,27 @@ class USBDriver extends events.EventEmitter {
 
 			if (this.leftover) {
 				data = Buffer.concat([this.leftover, data]);
-				this.leftover = null;
+				this.leftover = undefined;
 			}
 
 			if (data.readUInt8(0) !== 0xA4) {
 				throw 'SYNC missing';
 			}
 
-			var len = data.length;
-			var beginBlock = 0;
+			const len = data.length;
+			let beginBlock = 0;
 			while (beginBlock < len) {
 				if (beginBlock + 1 === len) {
 					this.leftover = data.slice(beginBlock);
 					break;
 				}
-				var block_len = data.readUInt8(beginBlock + 1);
-				var endBlock = beginBlock + block_len + 4;
+				const blockLen = data.readUInt8(beginBlock + 1);
+				const endBlock = beginBlock + blockLen + 4;
 				if (endBlock > len) {
 					this.leftover = data.slice(beginBlock);
 					break;
 				}
-				var readData = data.slice(beginBlock, endBlock);
+				const readData = data.slice(beginBlock, endBlock);
 				this.read(readData);
 				beginBlock = endBlock;
 			}
@@ -397,7 +397,7 @@ class USBDriver extends events.EventEmitter {
 	}
 
 	detach(sensor: BaseSensor): boolean {
-		var idx = this.attachedSensors.indexOf(sensor);
+		const idx = this.attachedSensors.indexOf(sensor);
 		if (idx < 0) {
 			return false;
 		}
@@ -411,7 +411,7 @@ class USBDriver extends events.EventEmitter {
 	}
 
 	detach_all() {
-		var copy = this.attachedSensors;
+		const copy = this.attachedSensors;
 		copy.forEach((sensor: BaseSensor) => sensor.detach());
 	}
 
@@ -426,7 +426,7 @@ class USBDriver extends events.EventEmitter {
 
 	read(data: Buffer) {
 		//console.log('DATA RECV: ', data);
-		var messageID = data.readUInt8(2);
+		const messageID = data.readUInt8(2);
 		if (messageID === Constants.MESSAGE_STARTUP) {
 			this.write(Messages.requestMessage(0, Constants.MESSAGE_CAPABILITIES));
 		} else if (messageID === Constants.MESSAGE_CAPABILITIES) {
@@ -453,7 +453,7 @@ export class GarminStick3 extends USBDriver {
 	}
 }
 
-interface DecodeDataCallback {
+interface IDecodeDataCallback {
 	(data: Buffer): void;
 }
 
@@ -462,7 +462,7 @@ class BaseSensor extends events.EventEmitter {
 	deviceID: number;
 	transmissionType: number;
 
-	protected decodeDataCbk: DecodeDataCallback;
+	protected decodeDataCbk: IDecodeDataCallback;
 
 	constructor(private stick: USBDriver) {
 		super();
@@ -478,50 +478,43 @@ class BaseSensor extends events.EventEmitter {
 			throw 'stick cannot scan';
 		}
 
-		var channel = 0;
+		const channel = 0;
 
-		var onStatus = (status) => {
+		const onStatus = (status) => {
 			switch (status.msg) {
-				case 0x01: {
+				case 0x01:
 					switch (status.code) {
-						case Constants.EVENT_CHANNEL_CLOSED: {
+						case Constants.EVENT_CHANNEL_CLOSED:
 							this.write(Messages.unassignChannel(channel));
 							break;
-						}
+						default:
+							break;
 					}
 					break;
-				}
-				case Constants.MESSAGE_CHANNEL_ASSIGN: {
+				case Constants.MESSAGE_CHANNEL_ASSIGN:
 					this.write(Messages.setDevice(channel, 0, 0, 0));
 					break;
-				}
-				case Constants.MESSAGE_CHANNEL_ID: {
+				case Constants.MESSAGE_CHANNEL_ID:
 					this.write(Messages.setFrequency(channel, frequency));
 					break;
-				}
-				case Constants.MESSAGE_CHANNEL_FREQUENCY: {
+				case Constants.MESSAGE_CHANNEL_FREQUENCY:
 					this.write(Messages.setRxExt());
 					break;
-				}
-				case Constants.MESSAGE_ENABLE_RX_EXT: {
+				case Constants.MESSAGE_ENABLE_RX_EXT:
 					this.write(Messages.libConfig(0xC0));
 					break;
-				}
-				case Constants.MESSAGE_LIB_CONFIG: {
+				case Constants.MESSAGE_LIB_CONFIG:
 					this.write(Messages.openRxScan());
 					break;
-				}
-				case Constants.MESSAGE_CHANNEL_OPEN_RX_SCAN: {
+				case Constants.MESSAGE_CHANNEL_OPEN_RX_SCAN:
 					if (this.decodeDataCbk) {
 						this.stick.on('read', this.decodeDataCbk);
 					}
 					process.nextTick(() => this.emit('attached'));
 					break;
-				}
-				case Constants.MESSAGE_CHANNEL_CLOSE: {
+				case Constants.MESSAGE_CHANNEL_CLOSE:
 					break;
-				}
-				case Constants.MESSAGE_CHANNEL_UNASSIGN: {
+				case Constants.MESSAGE_CHANNEL_UNASSIGN:
 					this.removeListener('status', onStatus);
 					this.channel = undefined;
 					if (this.decodeDataCbk) {
@@ -529,7 +522,8 @@ class BaseSensor extends events.EventEmitter {
 					}
 					process.nextTick(() => this.emit('detached'));
 					break;
-				}
+				default:
+					break;
 			}
 		};
 
@@ -569,48 +563,41 @@ class BaseSensor extends events.EventEmitter {
 		this.deviceID = deviceID;
 		this.transmissionType = transmissionType;
 
-		var onStatus = (status) => {
+		const onStatus = (status) => {
 			switch (status.msg) {
-				case 0x01: {
+				case 0x01:
 					switch (status.code) {
-						case Constants.EVENT_CHANNEL_CLOSED: {
+						case Constants.EVENT_CHANNEL_CLOSED:
 							this.write(Messages.unassignChannel(channel));
 							break;
-						}
+						default:
+							break;
 					}
 					break;
-				}
-				case Constants.MESSAGE_CHANNEL_ASSIGN: {
+				case Constants.MESSAGE_CHANNEL_ASSIGN:
 					this.write(Messages.setDevice(channel, deviceID, deviceType, transmissionType));
 					break;
-				}
-				case Constants.MESSAGE_CHANNEL_ID: {
+				case Constants.MESSAGE_CHANNEL_ID:
 					this.write(Messages.searchChannel(channel, timeout));
 					break;
-				}
-				case Constants.MESSAGE_CHANNEL_SEARCH_TIMEOUT: {
+				case Constants.MESSAGE_CHANNEL_SEARCH_TIMEOUT:
 					this.write(Messages.setFrequency(channel, frequency));
 					break;
-				}
-				case Constants.MESSAGE_CHANNEL_FREQUENCY: {
+				case Constants.MESSAGE_CHANNEL_FREQUENCY:
 					this.write(Messages.setPeriod(channel, period));
 					break;
-				}
-				case Constants.MESSAGE_CHANNEL_PERIOD: {
+				case Constants.MESSAGE_CHANNEL_PERIOD:
 					this.write(Messages.openChannel(channel));
 					break;
-				}
-				case Constants.MESSAGE_CHANNEL_OPEN: {
+				case Constants.MESSAGE_CHANNEL_OPEN:
 					if (this.decodeDataCbk) {
 						this.stick.on('read', this.decodeDataCbk);
 					}
 					process.nextTick(() => this.emit('attached'));
 					break;
-				}
-				case Constants.MESSAGE_CHANNEL_CLOSE: {
+				case Constants.MESSAGE_CHANNEL_CLOSE:
 					break;
-				}
-				case Constants.MESSAGE_CHANNEL_UNASSIGN: {
+				case Constants.MESSAGE_CHANNEL_UNASSIGN:
 					this.removeListener('status', onStatus);
 					this.channel = undefined;
 					if (this.decodeDataCbk) {
@@ -618,7 +605,8 @@ class BaseSensor extends events.EventEmitter {
 					}
 					process.nextTick(() => this.emit('detached'));
 					break;
-				}
+				default:
+					break;
 			}
 		};
 
@@ -642,12 +630,12 @@ class BaseSensor extends events.EventEmitter {
 	}
 
 	private handleEventMessages(data: Buffer) {
-		var messageID = data.readUInt8(2);
+		const messageID = data.readUInt8(2);
 
 		if (messageID === Constants.MESSAGE_CHANNEL_EVENT && data.readUInt8(3) === this.channel) {
-			var status = {
+			const status = {
 				msg: data.readUInt8(4),
-				code: data.readUInt8(5)
+				code: data.readUInt8(5),
 			};
 
 			this.emit('status', status);

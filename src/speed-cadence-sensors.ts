@@ -2,10 +2,14 @@
 
 import Ant = require('./ant');
 
-let Messages = Ant.Messages;
-let Constants = Ant.Constants;
+const Messages = Ant.Messages;
+const Constants = Ant.Constants;
 
 class SpeedCadenceSensorState {
+	constructor(deviceID: number) {
+		this.DeviceID = deviceID;
+	}
+
 	DeviceID: number;
 	CadenceEventTime: number;
 	CumulativeCadenceRevolutionCount: number;
@@ -13,10 +17,6 @@ class SpeedCadenceSensorState {
 	CumulativeSpeedRevolutionCount: number;
 	CalculatedCadence: number;
 	CalculatedSpeed: number;
-
-	constructor(deviceID: number) {
-		this.DeviceID = deviceID;
-	}
 }
 
 class SpeedCadenceScanState extends SpeedCadenceSensorState {
@@ -24,7 +24,8 @@ class SpeedCadenceScanState extends SpeedCadenceSensorState {
 	Threshold: number;
 }
 
-let updateState = function (state: SpeedCadenceSensorState, data: Buffer): SpeedCadenceSensorState {
+const updateState = function (sensor: SpeedCadenceSensor | SpeedCadenceScanner,
+	state: SpeedCadenceSensorState | SpeedCadenceScanState, data: Buffer) {
 	//get old state for calculating cumulative values
 	let oldCadenceTime = state.CadenceEventTime;
 	let oldCadenceCount = state.CumulativeCadenceRevolutionCount;
@@ -53,7 +54,7 @@ let updateState = function (state: SpeedCadenceSensorState, data: Buffer): Speed
 		let cadence = ((60 * (cadenceCount - oldCadenceCount) * 1024) / (cadenceTime - oldCadenceTime));
 		state.CalculatedCadence = cadence;
 		if (!isNaN(state.CalculatedCadence)) {
-			this.emit('cadenceData', state);
+			sensor.emit('cadenceData', state);
 		}
 	}
 
@@ -64,15 +65,14 @@ let updateState = function (state: SpeedCadenceSensorState, data: Buffer): Speed
 		if (oldSpeedTime > speedEventTime) { //Hit rollover value
 			speedEventTime += (1024 * 64);
 		}
-		let speed = (this.wheelCircumference * (speedRevolutionCount - oldSpeedCount) * 1024) / (speedEventTime - oldSpeedTime);
+		let speed = (sensor.wheelCircumference * (speedRevolutionCount - oldSpeedCount) * 1024) / (speedEventTime - oldSpeedTime);
 		let speedMph = speed * 2.237; //according to wolfram alpha
 
 		state.CalculatedSpeed = speedMph;
 		if (!isNaN(state.CalculatedSpeed)) {
-			this.emit('speedData', state);
+			sensor.emit('speedData', state);
 		}
 	}
-	return state;
 };
 
 /*
@@ -84,7 +84,6 @@ export class SpeedCadenceSensor extends Ant.AntPlusSensor {
 	static deviceType = 0x79;
 	state: SpeedCadenceSensorState;
 	wheelCircumference: number = 2.118; //This is my 700c wheel, just using as default
-	updateState = updateState.bind(this);
 
 	setWheelCircumference(wheelCircumference: number) {
 		this.wheelCircumference = wheelCircumference;
@@ -109,20 +108,21 @@ export class SpeedCadenceSensor extends Ant.AntPlusSensor {
 		}
 
 		switch (type) {
-			case Constants.MESSAGE_CHANNEL_BROADCAST_DATA: {
+			case Constants.MESSAGE_CHANNEL_BROADCAST_DATA:
 				if (this.deviceID === 0) {
 					this.write(Messages.requestMessage(this.channel, Constants.MESSAGE_CHANNEL_ID));
 				}
 
-				this.state = this.updateState(this.state, data);
+				updateState(this, this.state, data);
 				break;
-			}
 
-			case Constants.MESSAGE_CHANNEL_ID: {
+			case Constants.MESSAGE_CHANNEL_ID:
 				this.deviceID = data.readUInt16LE(Messages.BUFFER_INDEX_MSG_DATA);
 				this.transmissionType = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 3);
 				this.state.DeviceID = this.deviceID;
-			}
+				break;
+			default:
+				break;
 		}
 	}
 
@@ -131,7 +131,6 @@ export class SpeedCadenceSensor extends Ant.AntPlusSensor {
 export class SpeedCadenceScanner extends Ant.AntPlusScanner {
 	static deviceType = 0x79;
 	wheelCircumference: number = 2.118; //This is my 700c wheel, just using as default
-	updateState = updateState.bind(this);
 
 	states: { [id: number]: SpeedCadenceScanState } = {};
 
@@ -173,9 +172,11 @@ export class SpeedCadenceScanner extends Ant.AntPlusScanner {
 		}
 
 		switch (data.readUInt8(Messages.BUFFER_INDEX_MSG_TYPE)) {
-			case Constants.MESSAGE_CHANNEL_BROADCAST_DATA: {
-				this.states[deviceId] = this.updateState(this.states[deviceId], data);
-			}
+			case Constants.MESSAGE_CHANNEL_BROADCAST_DATA:
+				updateState(this, this.states[deviceId], data);
+				break;
+			default:
+				break;
 		}
 	}
 }
