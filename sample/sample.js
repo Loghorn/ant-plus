@@ -1,6 +1,6 @@
 var Ant = require('../ant-plus');
 
-var stick = new Ant.GarminStick2;
+var stick = new Ant.GarminStick3;
 
 var sensor1 = new Ant.HeartRateSensor(stick);
 
@@ -33,7 +33,7 @@ sensor2.on('detached', function () { console.log('sensor2 detached'); });
 var scanner = new Ant.HeartRateScanner(stick);
 
 scanner.on('hbdata', function (data) {
-	console.log('scanner: ', data.DeviceID, data.ComputedHeartRate);
+	console.log('scanner: ', data.DeviceID, data.ComputedHeartRate, data.Rssi);
 });
 
 scanner.on('attached', function () { console.log('scanner attached'); });

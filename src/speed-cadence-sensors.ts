@@ -148,7 +148,7 @@ export class SpeedCadenceScanner extends Ant.AntPlusScanner {
 	}
 
 	decodeData(data: Buffer) {
-		if (!(data.readUInt8(Messages.BUFFER_INDEX_EXT_MSG_BEGIN) & 0x80)) {
+		if (data.length <= Messages.BUFFER_INDEX_EXT_MSG_BEGIN || !(data.readUInt8(Messages.BUFFER_INDEX_EXT_MSG_BEGIN) & 0x80)) {
 			console.log('wrong message format');
 			return;
 		}
