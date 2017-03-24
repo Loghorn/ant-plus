@@ -15,7 +15,7 @@ Use [Zadig](http://sourceforge.net/projects/libwdi/files/zadig/) to install the 
 npm install ant-plus
 ```
 
-##usage
+## usage
 
 ```javascript
 var Ant = require('ant-plus');
@@ -52,7 +52,7 @@ if (!stick.open()) {
 }
 ```
 
-###scanning
+### scanning
 ```javascript
 sensor.on('hbdata', function (data) {
 	console.log(data.DeviceID, data.ComputedHeartRate);
@@ -67,7 +67,7 @@ if (!stick.open()) {
 }
 ```
 
-##Important notes
+## Important notes
 
 * never attach a sensor before receiveing the startup event
 * never attach a new sensor before receiving the attached or detached event of the previous sensor
@@ -75,120 +75,120 @@ if (!stick.open()) {
 
 ## Objects
 
-###GarminStick2 and GarminStick3
+### GarminStick2 and GarminStick3
 
-####properties
+#### properties
 
-#####maxChannels
+##### maxChannels
 
 The maximum number of channels that this stick supports; valid only after startup event fired.
 
-####methods
+#### methods
 
-#####is_present()
+##### is_present()
 
 Checks if the stick is present. Returns true if it is, false otherwise.
 
-#####open()
+##### open()
 
 Tries to open the stick. Returns false on failure.
 
-#####close()
+##### close()
 
 Closes the stick.
 
-####events
+#### events
 
-#####startup
+##### startup
 
 Fired after the stick is correctly initialized.
 
-#####shutdown
+##### shutdown
 
 Fired after the stick is correctly closed.
 
-###HeartRateSensor
+### HeartRateSensor
 
-####methods
+#### methods
 
-#####attach(channel, deviceId)
+##### attach(channel, deviceId)
 
 Attaches the sensors, using the specified channel and deviceId (use 0 to connect to the first device found).
 
-#####detach()
+##### detach()
 
 Detaches the sensor.
 
-####events
+#### events
 
-#####attached
+##### attached
 
 Fired after the sensor is correctly attached.
 
-#####detached
+##### detached
 
 Fired after the sensor is correctly detached.
 
-#####hbdata
+##### hbdata
 
 Fired when new heartbeat data is received.
 
-###HeartRateScanner
+### HeartRateScanner
 
-#####scan()
+##### scan()
 
 Attaches the sensors and starts scanning for data from every devices in range.
 
-#####detach()
+##### detach()
 
 Detaches the sensor.
 
-####events
+#### events
 
-#####attached
+##### attached
 
 Fired after the sensor is correctly attached.
 
-#####detached
+##### detached
 
 Fired after the sensor is correctly detached.
 
-#####hbdata
+##### hbdata
 
 Fired when new heartbeat data is received.
 
-###SpeedCadenceSensor
+### SpeedCadenceSensor
 
-#####attach(channel, deviceId)
+##### attach(channel, deviceId)
 
 Attaches the sensor, using the specified channel and deviceId (use 0 to connect to the first device found).
 
-#####detach()
+##### detach()
 
 Detaches the sensor.
 
-####setWheelCircumference(circumferenceInMeters)
+#### setWheelCircumference(circumferenceInMeters)
 
 Calibrates the speed sensor. Defaults to an ~ 700c wheel, 2.118
 
-####events
+#### events
 
-#####attached
+##### attached
 
 Fired after the sensor is correctly attached.
 
-#####detached
+##### detached
 
 Fired after the sensor is correctly detached.
 
-#####speedData
+##### speedData
 
 Fired when a new wheel speed is calculated
 
-#####cadenceData
+##### cadenceData
 
 Fired when a new pedal cadence is calculated
 
-###StrideSpeedDistanceSensor
-###StrideSpeedDistanceScanner
+### StrideSpeedDistanceSensor
+### StrideSpeedDistanceScanner
 
