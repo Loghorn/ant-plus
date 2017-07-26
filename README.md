@@ -200,7 +200,14 @@ Attaches the sensor, using the specified channel and deviceId (use 0 to connect 
 
 #### events
 
+##### cadenceData
+
+Fired when new cadence has been calculated.
+
+##### torqueData
+
+Fired when new torque has been calculated.
+
 ##### powerData
 
-Fired when new data is received. Contains Torque for whole sensor, left side and right side. And force for whole sensor,
-left side and right side.
+Fired when new power has been calculated.

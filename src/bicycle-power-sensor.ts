@@ -17,7 +17,7 @@ class BicyclePowerState {
     Time: number;
     TorqueTicksStamp: number;
 
-    CalculatedCadance: number;
+    CalculatedCadence: number;
     CalculatedTorque: number;
     CalculatedPower: number;
 }
@@ -63,7 +63,7 @@ const updateState = function (sensor: BicyclePowerSensor | BicyclePowerScanner,
         const elapsedTime = timeStamp - oldTime * 0.0005;
 
         const cadencePeriod = elapsedTime / (eventCount - oldEventCount); // s
-        state.CalculatedCadance = Math.round(60.0 / cadencePeriod); // rpm
+        state.CalculatedCadence = Math.round(60.0 / cadencePeriod); // rpm
 
         const offset = 478;
         const torqueTicks = torqueTicksStamp - oldTorqueTicks;
@@ -71,11 +71,11 @@ const updateState = function (sensor: BicyclePowerSensor | BicyclePowerScanner,
         const torque = torqueFrequency / (slope / 10); // Nm
         state.CalculatedTorque = torque;
 
-        const pi = 3.1415
-        state.CalculatedPower = torque * cadencePeriod * pi / 30; // watts
+        const pi = 3.1415;
+        state.CalculatedPower = torque * cadencePeriod * pi / 30; // Watts
 
-        if (!isNaN(state.CalculatedCadance)) {
-            sensor.emit('cadenceData', state.CalculatedCadance);
+        if (!isNaN(state.CalculatedCadence)) {
+            sensor.emit('cadenceData', state.CalculatedCadence);
         }
 
         if (!isNaN(state.CalculatedTorque)) {
