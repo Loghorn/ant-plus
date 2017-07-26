@@ -12,16 +12,14 @@ class BicyclePowerState {
 
     DeviceID: number;
 
-    TorqueWhole: number;
-    TorqueLeft: number;
-    TorqueRight: number;
+    EventCount: number;
+    Slope: number;
+    Time: number;
+    TorqueTicksStamp: number;
 
-    ForceWhole: number;
-    ForceLeft: number;
-    ForceRight: number;
-
-    Temperature: number;
-    Voltage: number;
+    CalculatedCadance: number;
+    CalculatedTorque: number;
+    CalculatedPower: number;
 }
 
 class BicyclePowerScanState extends BicyclePowerState {
@@ -30,29 +28,64 @@ class BicyclePowerScanState extends BicyclePowerState {
 
 const updateState = function (sensor: BicyclePowerSensor | BicyclePowerScanner,
                               state: BicyclePowerState | BicyclePowerScanState, data: Buffer) {
-    const torqueWhole = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 4);
-    const torqueLeft = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 5);
-    const torqueRight = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 6);
+    const oldEventCount = state.EventCount;
+    const oldTime = state.Time;
+    const oldTorqueTicks = state.TorqueTicksStamp;
 
-    const forceWhole = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 12);
-    const forceLeft = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 13);
-    const forceRight = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 14);
+    let eventCount = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA - 3);
 
-    const temperature = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 25);
-    const voltage = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 26);
+    let slope = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA - 2);
+    slope |= data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA - 1) << 8;
 
-    state.TorqueWhole = torqueWhole;
-    state.TorqueLeft = torqueLeft;
-    state.TorqueRight = torqueRight;
+    let timeStamp = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA);
+    timeStamp |= data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 1) << 8;
 
-    state.ForceWhole = forceWhole;
-    state.ForceLeft = forceLeft;
-    state.ForceRight = forceRight;
+    let torqueTicksStamp = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 2);
+    torqueTicksStamp |= data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 3) << 8;
 
-    state.Temperature = temperature;
-    state.Voltage = voltage;
+    if (oldTime !== timeStamp) {
+        state.EventCount = eventCount;
+        if (oldTime > timeStamp) { //Hit rollover value
+            timeStamp += (256);
+        }
 
-    sensor.emit('powerData', state);
+        state.Time = timeStamp;
+        if (oldTime > timeStamp) { //Hit rollover value
+            timeStamp += (1024 * 64);
+        }
+
+        state.Slope = slope;
+        state.TorqueTicksStamp = torqueTicksStamp;
+        if (oldTime > timeStamp) { //Hit rollover value
+            timeStamp += (1024 * 64);
+        }
+
+        const elapsedTime = timeStamp - oldTime * 0.0005;
+
+        const cadencePeriod = elapsedTime / (eventCount - oldEventCount); // s
+        state.CalculatedCadance = Math.round(60.0 / cadencePeriod); // rpm
+
+        const offset = 478;
+        const torqueTicks = torqueTicksStamp - oldTorqueTicks;
+        const torqueFrequency = 1 / (elapsedTime / torqueTicks) - offset; // Hz
+        const torque = torqueFrequency / (slope / 10); // Nm
+        state.CalculatedTorque = torque;
+
+        const pi = 3.1415
+        state.CalculatedPower = torque * cadencePeriod * pi / 30; // watts
+
+        if (!isNaN(state.CalculatedCadance)) {
+            sensor.emit('cadenceData', state.CalculatedCadance);
+        }
+
+        if (!isNaN(state.CalculatedTorque)) {
+            sensor.emit('torqueData', state.CalculatedTorque);
+        }
+
+        if (!isNaN(state.CalculatedPower)) {
+            sensor.emit('powerData', state.CalculatedPower);
+        }
+    }
 };
 
 /*
