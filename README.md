@@ -192,3 +192,15 @@ Fired when a new pedal cadence is calculated
 ### StrideSpeedDistanceSensor
 ### StrideSpeedDistanceScanner
 
+### BicylePowerSensor
+
+##### attach(channel, deviceId)
+
+Attaches the sensor, using the specified channel and deviceId (use 0 to connect to the first device found).
+
+#### events
+
+##### powerData
+
+Fired when new data is received. Contains Torque for whole sensor, left side and right side. And force for whole sensor,
+left side and right side.
