@@ -19,21 +19,27 @@ class BicyclePowerState {
     ForceWhole: number;
     ForceLeft: number;
     ForceRight: number;
+
+    Temperature: number;
+    Voltage: number;
 }
 
 class BicyclePowerScanState extends BicyclePowerState {
     Rssi: number;
 }
 
-const updateState = function (sensor: ByciclePowerSensor | ByciclePowerScanner,
+const updateState = function (sensor: BicyclePowerSensor | BicyclePowerScanner,
                               state: BicyclePowerState | BicyclePowerScanState, data: Buffer) {
-    let torqueWhole = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 4);
-    let torqueLeft = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 5);
-    let torqueRight = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 6);
+    const torqueWhole = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 4);
+    const torqueLeft = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 5);
+    const torqueRight = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 6);
 
-    let forceWhole = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 12);
-    let forceLeft = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 13);
-    let forceRight = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 14);
+    const forceWhole = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 12);
+    const forceLeft = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 13);
+    const forceRight = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 14);
+
+    const temperature = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 25);
+    const voltage = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 26);
 
     state.TorqueWhole = torqueWhole;
     state.TorqueLeft = torqueLeft;
@@ -43,6 +49,9 @@ const updateState = function (sensor: ByciclePowerSensor | ByciclePowerScanner,
     state.ForceLeft = forceLeft;
     state.ForceRight = forceRight;
 
+    state.Temperature = temperature;
+    state.Voltage = voltage;
+
     sensor.emit('powerData', state);
 };
 
@@ -50,9 +59,14 @@ const updateState = function (sensor: ByciclePowerSensor | ByciclePowerScanner,
  * ANT+ profile: https://www.thisisant.com/developer/ant-plus/device-profiles/#523_tab
  * Spec sheet: https://www.thisisant.com/resources/bicycle-power/
  */
-export class ByciclePowerSensor extends Ant.AntPlusSensor {
+export class BicyclePowerSensor extends Ant.AntPlusSensor {
     channel: number;
+
     static deviceType = 0x0B;
+    static transmissionType = 0;
+    static timeOut = 255;
+    static period = 8182;
+
     state: BicyclePowerState;
 
     constructor(stick) {
@@ -61,13 +75,14 @@ export class ByciclePowerSensor extends Ant.AntPlusSensor {
     }
 
     public attach(channel, deviceID): void {
-        super.attach(channel, 'receive', deviceID, ByciclePowerSensor.deviceType, 0, 255, 8086);
+        super.attach(channel, 'receive', deviceID, BicyclePowerSensor.deviceType,
+            BicyclePowerSensor.transmissionType, BicyclePowerSensor.timeOut, BicyclePowerSensor.period;
         this.state = new BicyclePowerState(deviceID);
     }
 
     decodeData(data: Buffer) {
-        let channel = data.readUInt8(Messages.BUFFER_INDEX_CHANNEL_NUM);
-        let type = data.readUInt8(Messages.BUFFER_INDEX_MSG_TYPE);
+        const channel = data.readUInt8(Messages.BUFFER_INDEX_CHANNEL_NUM);
+        const type = data.readUInt8(Messages.BUFFER_INDEX_MSG_TYPE);
 
         if (channel !== this.channel) {
             return;
@@ -91,10 +106,9 @@ export class ByciclePowerSensor extends Ant.AntPlusSensor {
                 break;
         }
     }
-
 }
 
-export class ByciclePowerScanner extends Ant.AntPlusScanner {
+export class BicyclePowerScanner extends Ant.AntPlusScanner {
     static deviceType = 0x0B;
 
     states: { [id: number]: BicyclePowerState } = {};
@@ -115,10 +129,10 @@ export class ByciclePowerScanner extends Ant.AntPlusScanner {
             return;
         }
 
-        let deviceId = data.readUInt16LE(Messages.BUFFER_INDEX_EXT_MSG_BEGIN + 1);
-        let deviceType = data.readUInt8(Messages.BUFFER_INDEX_EXT_MSG_BEGIN + 3);
+        const deviceId = data.readUInt16LE(Messages.BUFFER_INDEX_EXT_MSG_BEGIN + 1);
+        const deviceType = data.readUInt8(Messages.BUFFER_INDEX_EXT_MSG_BEGIN + 3);
 
-        if (deviceType !== ByciclePowerSensor.deviceType) {
+        if (deviceType !== BicyclePowerScanner.deviceType) {
             return;
         }
 
