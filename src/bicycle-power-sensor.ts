@@ -5,74 +5,45 @@ import Ant = require('./ant');
 const Messages = Ant.Messages;
 const Constants = Ant.Constants;
 
-class SpeedCadenceSensorState {
+class BicyclePowerState {
     constructor(deviceID: number) {
         this.DeviceID = deviceID;
     }
 
     DeviceID: number;
-    CadenceEventTime: number;
-    CumulativeCadenceRevolutionCount: number;
-    SpeedEventTime: number;
-    CumulativeSpeedRevolutionCount: number;
-    CalculatedCadence: number;
-    CalculatedSpeed: number;
+
+    TorqueWhole: number;
+    TorqueLeft: number;
+    TorqueRight: number;
+
+    ForceWhole: number;
+    ForceLeft: number;
+    ForceRight: number;
 }
 
-class SpeedCadenceScanState extends SpeedCadenceSensorState {
+class BicyclePowerScanState extends BicyclePowerState {
     Rssi: number;
-    Threshold: number;
 }
 
-const updateState = function (sensor: ByciclePowerSensor | ByciclePowerSensor,
-                              state: SpeedCadenceSensorState | SpeedCadenceScanState, data: Buffer) {
-    //get old state for calculating cumulative values
-    let oldCadenceTime = state.CadenceEventTime;
-    let oldCadenceCount = state.CumulativeCadenceRevolutionCount;
-    let oldSpeedTime = state.SpeedEventTime;
-    let oldSpeedCount = state.CumulativeSpeedRevolutionCount;
+const updateState = function (sensor: ByciclePowerSensor | ByciclePowerScanner,
+                              state: BicyclePowerState | BicyclePowerScanState, data: Buffer) {
+    let torqueWhole = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 4);
+    let torqueLeft = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 5);
+    let torqueRight = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 6);
 
-    let cadenceTime = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA);
-    cadenceTime |= data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 1) << 8;
+    let forceWhole = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 12);
+    let forceLeft = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 13);
+    let forceRight = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 14);
 
-    let cadenceCount = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 2);
-    cadenceCount |= data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 3) << 8;
+    state.TorqueWhole = torqueWhole;
+    state.TorqueLeft = torqueLeft;
+    state.TorqueRight = torqueRight;
 
-    let speedEventTime = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 4);
-    speedEventTime |= data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 5) << 8;
+    state.ForceWhole = forceWhole;
+    state.ForceLeft = forceLeft;
+    state.ForceRight = forceRight;
 
-    let speedRevolutionCount = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 6);
-    speedRevolutionCount |= data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 7) << 8;
-
-    if (cadenceTime !== oldCadenceTime) {
-        state.CadenceEventTime = cadenceTime;
-        state.CumulativeCadenceRevolutionCount = cadenceCount;
-
-        if (oldCadenceTime > cadenceTime) { //Hit rollover value
-            cadenceTime += (1024 * 64);
-        }
-        let cadence = ((60 * (cadenceCount - oldCadenceCount) * 1024) / (cadenceTime - oldCadenceTime));
-        state.CalculatedCadence = cadence;
-        if (!isNaN(state.CalculatedCadence)) {
-            sensor.emit('cadenceData', state);
-        }
-    }
-
-    if (speedEventTime !== oldSpeedTime) {
-        state.SpeedEventTime = speedEventTime;
-        state.CumulativeSpeedRevolutionCount = speedRevolutionCount;
-        //speed in km/sec
-        if (oldSpeedTime > speedEventTime) { //Hit rollover value
-            speedEventTime += (1024 * 64);
-        }
-        let speed = (sensor.wheelCircumference * (speedRevolutionCount - oldSpeedCount) * 1024) / (speedEventTime - oldSpeedTime);
-        let speedMph = speed * 2.237; //according to wolfram alpha
-
-        state.CalculatedSpeed = speedMph;
-        if (!isNaN(state.CalculatedSpeed)) {
-            sensor.emit('speedData', state);
-        }
-    }
+    sensor.emit('powerData', state);
 };
 
 /*
@@ -82,7 +53,7 @@ const updateState = function (sensor: ByciclePowerSensor | ByciclePowerSensor,
 export class ByciclePowerSensor extends Ant.AntPlusSensor {
     channel: number;
     static deviceType = 0x0B;
-    state: SpeedCadenceSensorState;
+    state: BicyclePowerState;
 
     constructor(stick) {
         super(stick);
@@ -91,7 +62,7 @@ export class ByciclePowerSensor extends Ant.AntPlusSensor {
 
     public attach(channel, deviceID): void {
         super.attach(channel, 'receive', deviceID, ByciclePowerSensor.deviceType, 0, 255, 8086);
-        this.state = new SpeedCadenceSensorState(deviceID);
+        this.state = new BicyclePowerState(deviceID);
     }
 
     decodeData(data: Buffer) {
@@ -123,10 +94,10 @@ export class ByciclePowerSensor extends Ant.AntPlusSensor {
 
 }
 
-export class ByciclePowerSensor extends Ant.AntPlusScanner {
+export class ByciclePowerScanner extends Ant.AntPlusScanner {
     static deviceType = 0x0B;
 
-    states: { [id: number]: SpeedCadenceScanState } = {};
+    states: { [id: number]: BicyclePowerState } = {};
 
     constructor(stick) {
         super(stick);
@@ -138,7 +109,8 @@ export class ByciclePowerSensor extends Ant.AntPlusScanner {
     }
 
     decodeData(data: Buffer) {
-        if (data.length <= Messages.BUFFER_INDEX_EXT_MSG_BEGIN || !(data.readUInt8(Messages.BUFFER_INDEX_EXT_MSG_BEGIN) & 0x80)) {
+        if (data.length <= Messages.BUFFER_INDEX_EXT_MSG_BEGIN
+            || !(data.readUInt8(Messages.BUFFER_INDEX_EXT_MSG_BEGIN) & 0x80)) {
             console.log('wrong message format');
             return;
         }
@@ -151,14 +123,7 @@ export class ByciclePowerSensor extends Ant.AntPlusScanner {
         }
 
         if (!this.states[deviceId]) {
-            this.states[deviceId] = new SpeedCadenceScanState(deviceId);
-        }
-
-        if (data.readUInt8(Messages.BUFFER_INDEX_EXT_MSG_BEGIN) & 0x40) {
-            if (data.readUInt8(Messages.BUFFER_INDEX_EXT_MSG_BEGIN + 5) === 0x20) {
-                this.states[deviceId].Rssi = data.readInt8(Messages.BUFFER_INDEX_EXT_MSG_BEGIN + 6);
-                this.states[deviceId].Threshold = data.readInt8(Messages.BUFFER_INDEX_EXT_MSG_BEGIN + 7);
-            }
+            this.states[deviceId] = new BicyclePowerState(deviceId);
         }
 
         switch (data.readUInt8(Messages.BUFFER_INDEX_MSG_TYPE)) {
