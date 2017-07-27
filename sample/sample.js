@@ -7,7 +7,7 @@ var sensor1 = new Ant.HeartRateSensor(stick);
 var dev_id = 0;
 
 sensor1.on('hbdata', function (data) {
-	console.log('sensor 1: ', data.DeviceID, data.ComputedHeartRate);
+	console.log('sensor 1: ', data.DeviceID, data.ComputedHeartRate, data);
 	if (data.DeviceID !== 0 && dev_id === 0) {
 		dev_id = data.DeviceID;
 		console.log('detaching...');
@@ -33,7 +33,7 @@ sensor2.on('detached', function () { console.log('sensor2 detached'); });
 var scanner = new Ant.HeartRateScanner(stick);
 
 scanner.on('hbdata', function (data) {
-	console.log('scanner: ', data.DeviceID, data.ComputedHeartRate, data.Rssi);
+	console.log('scanner: ', data.DeviceID, data.ComputedHeartRate, data.Rssi, data);
 });
 
 scanner.on('attached', function () { console.log('scanner attached'); });
