@@ -45,7 +45,7 @@ const updateState = function (sensor: BicyclePowerSensor | BicyclePowerScanner,
 
     if (oldTime !== timeStamp) {
         state.EventCount = eventCount;
-        if (eventCount > eventCount) { //Hit rollover value
+        if (oldEventCount > eventCount) { //Hit rollover value
             eventCount += (256);
         }
 
@@ -56,8 +56,8 @@ const updateState = function (sensor: BicyclePowerSensor | BicyclePowerScanner,
 
         state.Slope = slope;
         state.TorqueTicksStamp = torqueTicksStamp;
-        if (oldTime > timeStamp) { //Hit rollover value
-            timeStamp += (1024 * 64);
+        if (oldTorqueTicks > torqueTicksStamp) { //Hit rollover value
+            torqueTicksStamp += (1024 * 64);
         }
 
         const elapsedTime = timeStamp - oldTime * 0.0005;
