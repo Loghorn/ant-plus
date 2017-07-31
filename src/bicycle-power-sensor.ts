@@ -65,9 +65,8 @@ const updateState = function (sensor: BicyclePowerSensor | BicyclePowerScanner,
         const cadencePeriod = elapsedTime / (eventCount - oldEventCount); // s
         state.CalculatedCadence = Math.round(60.0 / cadencePeriod); // rpm
 
-        const offset = 478;
         const torqueTicks = torqueTicksStamp - oldTorqueTicks;
-        const torqueFrequency = 1 / (elapsedTime / torqueTicks) - offset; // Hz
+        const torqueFrequency = 1 / (elapsedTime / torqueTicks) - sensor.offset; // Hz
         const torque = torqueFrequency / (slope / 10); // Nm
         state.CalculatedTorque = torque;
 
@@ -100,11 +99,17 @@ export class BicyclePowerSensor extends Ant.AntPlusSensor {
     static timeOut = 255;
     static period = 8182;
 
+    offset = 418; // Default
+
     state: BicyclePowerState;
 
     constructor(stick) {
         super(stick);
         this.decodeDataCbk = this.decodeData.bind(this);
+    }
+
+    set_offset(offset: number) {
+        this.offset = offset;
     }
 
     public attach(channel, deviceID): void {
@@ -146,9 +151,15 @@ export class BicyclePowerScanner extends Ant.AntPlusScanner {
 
     states: { [id: number]: BicyclePowerState } = {};
 
+    offset = 418; // Default
+
     constructor(stick) {
         super(stick);
         this.decodeDataCbk = this.decodeData.bind(this);
+    }
+
+    set_offset(offset: number) {
+        this.offset = offset;
     }
 
     public scan() {

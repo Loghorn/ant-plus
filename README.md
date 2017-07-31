@@ -198,6 +198,10 @@ Fired when a new pedal cadence is calculated
 
 Attaches the sensor, using the specified channel and deviceId (use 0 to connect to the first device found).
 
+##### set_offset(offset)
+
+Sets the offset of the PowerMeter.
+
 #### events
 
 ##### cadenceData
