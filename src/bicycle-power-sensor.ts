@@ -66,12 +66,12 @@ const updateState = function (sensor: BicyclePowerSensor | BicyclePowerScanner,
         state.CalculatedCadence = Math.round(60.0 / cadencePeriod); // rpm
 
         const torqueTicks = torqueTicksStamp - oldTorqueTicks;
-        const torqueFrequency = 1 / (elapsedTime / torqueTicks) - sensor.offset; // Hz
-        const torque = torqueFrequency / (slope / 10); // Nm
+        const torqueFrequency = 1.0 / (elapsedTime / torqueTicks) - sensor.offset; // Hz
+        const torque = torqueFrequency / (slope / 10.0); // Nm
         state.CalculatedTorque = torque;
 
         const pi = 3.1415;
-        state.CalculatedPower = torque * cadencePeriod * pi / 30; // Watts
+        state.CalculatedPower = torque * cadencePeriod * pi / 30.0; // Watts
 
         if (!isNaN(state.CalculatedCadence)) {
             sensor.emit('cadenceData', state.CalculatedCadence);

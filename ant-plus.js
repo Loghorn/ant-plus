@@ -14,6 +14,6 @@ module.exports = {
 	StrideSpeedDistanceScanner: SSD.StrideSpeedDistanceScanner,
 	SpeedCadenceSensor: SC.SpeedCadenceSensor,
 	SpeedCadenceScanner: SC.SpeedCadenceScanner,
-	BicylePowerSensor: PS.BicyclePowerSensor,
+	BicyclePowerSensor: PS.BicyclePowerSensor,
 	BicyclePowerScanner: PS.BicyclePowerScanner
 };
