@@ -73,17 +73,7 @@ const updateState = function (sensor: BicyclePowerSensor | BicyclePowerScanner,
         const pi = 3.1415;
         state.CalculatedPower = torque * cadencePeriod * pi / 30.0; // Watts
 
-        if (!isNaN(state.CalculatedCadence)) {
-            sensor.emit('cadenceData', state.CalculatedCadence);
-        }
-
-        if (!isNaN(state.CalculatedTorque)) {
-            sensor.emit('torqueData', state.CalculatedTorque);
-        }
-
-        if (!isNaN(state.CalculatedPower)) {
-            sensor.emit('powerData', state.CalculatedPower);
-        }
+        sensor.emit('powerData', state);
     }
 };
 
