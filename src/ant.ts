@@ -284,6 +284,7 @@ class USBDriver extends events.EventEmitter {
 	private leftover: Buffer;
 	private usedChannels: number = 0;
 	private attachedSensors: BaseSensor[] = [];
+	private detachedKernel: boolean = false;
 
 	maxChannels: number = 0;
 	canScan: boolean = false;
@@ -302,8 +303,15 @@ class USBDriver extends events.EventEmitter {
 		if (!this.device) {
 			return false;
 		}
+
 		this.device.open();
 		this.iface = this.device.interfaces[0];
+
+		if (this.iface.isKernelDriverActive()) { // Detach kernel driver if active
+			this.detachedKernel = true;
+			this.iface.detachKernelDriver();
+		}
+
 		this.iface.claim();
 		this.inEp = this.iface.endpoints[0];
 
@@ -361,6 +369,10 @@ class USBDriver extends events.EventEmitter {
 		this.detach_all();
 		this.inEp.stopPoll();
 		this.device.reset(() => {
+			if (this.detachedKernel) {
+				this.device.attachKernelDriver();
+			}
+
 			this.device.close();
 			this.emit('shutdown');
 		});
