@@ -60,18 +60,19 @@ const updateState = function (sensor: BicyclePowerSensor | BicyclePowerScanner,
             torqueTicksStamp += (1024 * 64);
         }
 
-        const elapsedTime = timeStamp - oldTime * 0.0005;
+        const elapsedTime = (timeStamp - oldTime) * 0.0005;
 
         const cadencePeriod = elapsedTime / (eventCount - oldEventCount); // s
-        state.CalculatedCadence = Math.round(60.0 / cadencePeriod); // rpm
+        const cadence =  Math.round(60.0 / cadencePeriod); // rpm
+        state.CalculatedCadence = cadence;
 
         const torqueTicks = torqueTicksStamp - oldTorqueTicks;
         const torqueFrequency = 1.0 / (elapsedTime / torqueTicks) - sensor.offset; // Hz
         const torque = torqueFrequency / (slope / 10.0); // Nm
         state.CalculatedTorque = torque;
 
-        const pi = 3.1415;
-        state.CalculatedPower = torque * cadencePeriod * pi / 30.0; // Watts
+        const pi = 3.1415926535;
+        state.CalculatedPower = torque * cadence * pi / 30.0; // Watts
 
         sensor.emit('powerData', state);
     }
