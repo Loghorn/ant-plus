@@ -192,7 +192,7 @@ Fired when a new pedal cadence is calculated
 ### StrideSpeedDistanceSensor
 ### StrideSpeedDistanceScanner
 
-### BicylePowerSensor
+### PowerSensor
 
 ##### attach(channel, deviceId)
 

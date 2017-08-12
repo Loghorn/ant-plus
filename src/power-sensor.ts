@@ -5,7 +5,7 @@ import Ant = require('./ant');
 const Messages = Ant.Messages;
 const Constants = Ant.Constants;
 
-class BicyclePowerState {
+class PowerState {
     constructor(deviceID: number) {
         this.DeviceID = deviceID;
     }
@@ -14,7 +14,7 @@ class BicyclePowerState {
 
     EventCount: number;
     Slope: number;
-    Time: number;
+    TimeStamp: number;
     TorqueTicksStamp: number;
 
     CalculatedCadence: number;
@@ -22,57 +22,57 @@ class BicyclePowerState {
     CalculatedPower: number;
 }
 
-class BicyclePowerScanState extends BicyclePowerState {
-    Rssi: number;
+class PowerScanState extends PowerState {
+	Rssi: number;
+	Threshold: number;
 }
 
-const updateState = function (sensor: BicyclePowerSensor | BicyclePowerScanner,
-                              state: BicyclePowerState | BicyclePowerScanState, data: Buffer) {
+const updateState = function (sensor: PowerSensor | PowerScanner,
+							  state: PowerState | PowerScanState, data: Buffer) {
     const oldEventCount = state.EventCount;
-    const oldTime = state.Time;
-    const oldTorqueTicks = state.TorqueTicksStamp;
+    const oldTimeStamp = state.TimeStamp;
+    const oldTorqueTicksStamp = state.TorqueTicksStamp;
 
-    let eventCount = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA - 3);
+    let eventCount = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 1);
 
-    let slope = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA - 2);
-    slope |= data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA - 1) << 8;
+    let slope = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 3); // LSB
+    slope |= data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 2) << 8; // MSB
 
-    let timeStamp = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA);
-    timeStamp |= data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 1) << 8;
+    let timeStamp = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 5); // LSB
+    timeStamp |= data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 4) << 8; // MSB
 
-    let torqueTicksStamp = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 2);
-    torqueTicksStamp |= data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 3) << 8;
+    let torqueTicksStamp = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 7); // LSB
+    torqueTicksStamp |= data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 6) << 8; // MSB
 
-    if (oldTime !== timeStamp) {
+    if (timeStamp !== oldTimeStamp) {
         state.EventCount = eventCount;
         if (oldEventCount > eventCount) { //Hit rollover value
             eventCount += (256);
         }
 
-        state.Time = timeStamp;
-        if (oldTime > timeStamp) { //Hit rollover value
+        state.TimeStamp = timeStamp;
+        if (oldTimeStamp > timeStamp) { //Hit rollover value
             timeStamp += (1024 * 64);
         }
 
         state.Slope = slope;
         state.TorqueTicksStamp = torqueTicksStamp;
-        if (oldTorqueTicks > torqueTicksStamp) { //Hit rollover value
+        if (oldTorqueTicksStamp > torqueTicksStamp) { //Hit rollover value
             torqueTicksStamp += (1024 * 64);
         }
 
-        const elapsedTime = (timeStamp - oldTime) * 0.0005;
+        const elapsedTime = (timeStamp - oldTimeStamp) * 0.0005;
+		const torqueTicks = torqueTicksStamp - oldTorqueTicksStamp;
 
         const cadencePeriod = elapsedTime / (eventCount - oldEventCount); // s
-        const cadence =  Math.round(60.0 / cadencePeriod); // rpm
+        const cadence =  Math.round(60 / cadencePeriod); // rpm
         state.CalculatedCadence = cadence;
 
-        const torqueTicks = torqueTicksStamp - oldTorqueTicks;
-        const torqueFrequency = 1.0 / (elapsedTime / torqueTicks) - sensor.offset; // Hz
-        const torque = torqueFrequency / (slope / 10.0); // Nm
+        const torqueFrequency = (1 / (elapsedTime / torqueTicks)) - sensor.offset; // Hz
+        const torque = torqueFrequency / (slope / 10); // Nm
         state.CalculatedTorque = torque;
 
-        const pi = 3.1415926535;
-        state.CalculatedPower = torque * cadence * pi / 30.0; // Watts
+        state.CalculatedPower = torque * cadence * Math.PI / 30; // Watts
 
         sensor.emit('powerData', state);
     }
@@ -82,7 +82,7 @@ const updateState = function (sensor: BicyclePowerSensor | BicyclePowerScanner,
  * ANT+ profile: https://www.thisisant.com/developer/ant-plus/device-profiles/#523_tab
  * Spec sheet: https://www.thisisant.com/resources/bicycle-power/
  */
-export class BicyclePowerSensor extends Ant.AntPlusSensor {
+export class PowerSensor extends Ant.AntPlusSensor {
     channel: number;
 
     static deviceType = 0x0B;
@@ -90,9 +90,8 @@ export class BicyclePowerSensor extends Ant.AntPlusSensor {
     static timeOut = 255;
     static period = 8182;
 
-    offset = 418; // Default
-
-    state: BicyclePowerState;
+    offset = 478; // Default
+    state: PowerState;
 
     constructor(stick) {
         super(stick);
@@ -104,9 +103,9 @@ export class BicyclePowerSensor extends Ant.AntPlusSensor {
     }
 
     public attach(channel, deviceID): void {
-        super.attach(channel, 'receive', deviceID, BicyclePowerSensor.deviceType,
-            BicyclePowerSensor.transmissionType, BicyclePowerSensor.timeOut, BicyclePowerSensor.period;
-        this.state = new BicyclePowerState(deviceID);
+        super.attach(channel, 'receive', deviceID, PowerSensor.deviceType,
+            PowerSensor.transmissionType, PowerSensor.timeOut, PowerSensor.period);
+        this.state = new PowerState(deviceID);
     }
 
     decodeData(data: Buffer) {
@@ -118,13 +117,13 @@ export class BicyclePowerSensor extends Ant.AntPlusSensor {
         }
 
         switch (type) {
-            case Constants.MESSAGE_CHANNEL_BROADCAST_DATA:
-                if (this.deviceID === 0) {
-                    this.write(Messages.requestMessage(this.channel, Constants.MESSAGE_CHANNEL_ID));
-                }
+			case Constants.MESSAGE_CHANNEL_BROADCAST_DATA:
+				if (this.deviceID === 0) {
+					this.write(Messages.requestMessage(this.channel, Constants.MESSAGE_CHANNEL_ID));
+				}
 
-                updateState(this, this.state, data);
-                break;
+				updateState(this, this.state, data);
+				break;
 
             case Constants.MESSAGE_CHANNEL_ID:
                 this.deviceID = data.readUInt16LE(Messages.BUFFER_INDEX_MSG_DATA);
@@ -137,12 +136,12 @@ export class BicyclePowerSensor extends Ant.AntPlusSensor {
     }
 }
 
-export class BicyclePowerScanner extends Ant.AntPlusScanner {
+export class PowerScanner extends Ant.AntPlusScanner {
     static deviceType = 0x0B;
 
-    states: { [id: number]: BicyclePowerState } = {};
+    states: { [id: number]: PowerState } = {};
 
-    offset = 418; // Default
+    offset = 478; // Default
 
     constructor(stick) {
         super(stick);
@@ -167,20 +166,27 @@ export class BicyclePowerScanner extends Ant.AntPlusScanner {
         const deviceId = data.readUInt16LE(Messages.BUFFER_INDEX_EXT_MSG_BEGIN + 1);
         const deviceType = data.readUInt8(Messages.BUFFER_INDEX_EXT_MSG_BEGIN + 3);
 
-        if (deviceType !== BicyclePowerScanner.deviceType) {
+        if (deviceType !== PowerScanner.deviceType) {
             return;
         }
 
         if (!this.states[deviceId]) {
-            this.states[deviceId] = new BicyclePowerState(deviceId);
+            this.states[deviceId] = new PowerState(deviceId);
         }
 
-        switch (data.readUInt8(Messages.BUFFER_INDEX_MSG_TYPE)) {
-            case Constants.MESSAGE_CHANNEL_BROADCAST_DATA:
-                updateState(this, this.states[deviceId], data);
-                break;
-            default:
-                break;
-        }
+		if (data.readUInt8(Messages.BUFFER_INDEX_EXT_MSG_BEGIN) & 0x40) {
+			if (data.readUInt8(Messages.BUFFER_INDEX_EXT_MSG_BEGIN + 5) === 0x20) {
+				this.states[deviceId].Rssi = data.readInt8(Messages.BUFFER_INDEX_EXT_MSG_BEGIN + 6);
+				this.states[deviceId].Threshold = data.readInt8(Messages.BUFFER_INDEX_EXT_MSG_BEGIN + 7);
+			}
+		}
+
+		switch (data.readUInt8(Messages.BUFFER_INDEX_MSG_TYPE)) {
+			case Constants.MESSAGE_CHANNEL_BROADCAST_DATA:
+				updateState(this, this.states[deviceId], data);
+				break;
+			default:
+				break;
+		}
     }
 }
