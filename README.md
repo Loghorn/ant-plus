@@ -192,3 +192,26 @@ Fired when a new pedal cadence is calculated
 ### StrideSpeedDistanceSensor
 ### StrideSpeedDistanceScanner
 
+### PowerSensor
+
+##### attach(channel, deviceId)
+
+Attaches the sensor, using the specified channel and deviceId (use 0 to connect to the first device found).
+
+##### set_offset(offset)
+
+Sets the offset of the PowerMeter.
+
+#### events
+
+##### cadenceData
+
+Fired when new cadence has been calculated.
+
+##### torqueData
+
+Fired when new torque has been calculated.
+
+##### powerData
+
+Fired when new power has been calculated.
