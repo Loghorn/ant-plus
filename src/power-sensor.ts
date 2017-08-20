@@ -33,6 +33,11 @@ const updateState = function (sensor: PowerSensor | PowerScanner,
     const oldTimeStamp = state.TimeStamp;
     const oldTorqueTicksStamp = state.TorqueTicksStamp;
 
+    const messageType = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA);
+    if (messageType != 0x20) {
+    	return;
+	}
+
     let eventCount = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 1);
 
     let slope = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 3); // LSB
@@ -47,18 +52,18 @@ const updateState = function (sensor: PowerSensor | PowerScanner,
     if (timeStamp !== oldTimeStamp) {
         state.EventCount = eventCount;
         if (oldEventCount > eventCount) { //Hit rollover value
-            eventCount += (256);
+            eventCount += 255;
         }
 
         state.TimeStamp = timeStamp;
         if (oldTimeStamp > timeStamp) { //Hit rollover value
-            timeStamp += (1024 * 64);
+            timeStamp += 65400;
         }
 
         state.Slope = slope;
         state.TorqueTicksStamp = torqueTicksStamp;
         if (oldTorqueTicksStamp > torqueTicksStamp) { //Hit rollover value
-            torqueTicksStamp += (1024 * 64);
+            torqueTicksStamp += 65535;
         }
 
         const elapsedTime = (timeStamp - oldTimeStamp) * 0.0005;
