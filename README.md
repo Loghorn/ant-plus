@@ -7,6 +7,7 @@ A node.js module for ANT+
 Libusb is included as a submodule. On Linux, you'll need libudev to build libusb. On Ubuntu/Debian: `sudo apt-get install build-essential libudev-dev`
 
 ### Windows
+
 Use [Zadig](http://sourceforge.net/projects/libwdi/files/zadig/) to install the WinUSB driver for your USB device. Otherwise you will get `LIBUSB_ERROR_NOT_SUPPORTED` when attempting to open devices.
 
 ## Install
@@ -20,6 +21,7 @@ npm install ant-plus
 ```javascript
 var Ant = require('ant-plus');
 ```
+
 #### Create USB stick
 
 ```javascript
@@ -36,11 +38,11 @@ var sensor = new Ant.HeartRateSensor(stick);
 
 ```javascript
 sensor.on('hbdata', function (data) {
-	console.log(data.DeviceID, data.ComputedHeartRate);
+    console.log(data.DeviceID, data.ComputedHeartRate);
 });
 
 stick.on('startup', function () {
-	sensor.attach(0, 0);
+    sensor.attach(0, 0);
 });
 ```
 
@@ -48,22 +50,23 @@ stick.on('startup', function () {
 
 ```javascript
 if (!stick.open()) {
-	console.log('Stick not found!');
+    console.log('Stick not found!');
 }
 ```
 
 ### scanning
+
 ```javascript
 sensor.on('hbdata', function (data) {
-	console.log(data.DeviceID, data.ComputedHeartRate);
+    console.log(data.DeviceID, data.ComputedHeartRate);
 });
 
 stick.on('startup', function () {
-	sensor.scan();
+    sensor.scan();
 );
 
 if (!stick.open()) {
-	console.log('Stick not found!');
+    console.log('Stick not found!');
 }
 ```
 
@@ -190,5 +193,5 @@ Fired when a new wheel speed is calculated
 Fired when a new pedal cadence is calculated
 
 ### StrideSpeedDistanceSensor
-### StrideSpeedDistanceScanner
 
+### StrideSpeedDistanceScanner
