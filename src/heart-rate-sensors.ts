@@ -1,5 +1,3 @@
-/// <reference path="../typings/index.d.ts"/>
-
 import Ant = require('./ant');
 
 const Constants = Ant.Constants;
@@ -45,7 +43,7 @@ export class HeartRateSensor extends Ant.AntPlusSensor {
 		this.state = new HeartRateSensorState(deviceID);
 	}
 
-	state: HeartRateSensorState;
+	private state: HeartRateSensorState;
 
 	private oldPage: number;
 	private pageState: PageState = PageState.INIT_PAGE; // sets the state of the receiver - INIT, STD_PAGE, EXT_PAGE
@@ -139,7 +137,7 @@ export class HeartRateScanner extends Ant.AntPlusScanner {
 		super.scan('receive');
 	}
 
-	states: { [id: number]: HeartRateScannerState } = {};
+	private states: { [id: number]: HeartRateScannerState } = {};
 
 	private oldPage: number;
 	private pageState: PageState = PageState.INIT_PAGE;
@@ -152,8 +150,8 @@ export class HeartRateScanner extends Ant.AntPlusScanner {
 			return;
 		}
 
-		let deviceId = data.readUInt16LE(Messages.BUFFER_INDEX_EXT_MSG_BEGIN + 1);
-		let deviceType = data.readUInt8(Messages.BUFFER_INDEX_EXT_MSG_BEGIN + 3);
+		const deviceId = data.readUInt16LE(Messages.BUFFER_INDEX_EXT_MSG_BEGIN + 1);
+		const deviceType = data.readUInt8(Messages.BUFFER_INDEX_EXT_MSG_BEGIN + 3);
 
 		if (deviceType !== HeartRateScanner.deviceType) {
 			return;
@@ -174,7 +172,7 @@ export class HeartRateScanner extends Ant.AntPlusScanner {
 			case Constants.MESSAGE_CHANNEL_BROADCAST_DATA:
 			case Constants.MESSAGE_CHANNEL_ACKNOWLEDGED_DATA:
 			case Constants.MESSAGE_CHANNEL_BURST_DATA:
-				let page = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA);
+				const page = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA);
 				if (this.pageState === PageState.INIT_PAGE) {
 					this.pageState = PageState.STD_PAGE; // change the state to STD_PAGE and allow the checking of old and new pages
 					// decode with pages if the page byte or toggle bit has changed

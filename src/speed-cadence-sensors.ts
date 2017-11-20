@@ -1,5 +1,3 @@
-/// <reference path="../typings/index.d.ts"/>
-
 import Ant = require('./ant');
 
 const Messages = Ant.Messages;
@@ -27,10 +25,10 @@ class SpeedCadenceScanState extends SpeedCadenceSensorState {
 const updateState = function (sensor: SpeedCadenceSensor | SpeedCadenceScanner,
 	state: SpeedCadenceSensorState | SpeedCadenceScanState, data: Buffer) {
 	//get old state for calculating cumulative values
-	let oldCadenceTime = state.CadenceEventTime;
-	let oldCadenceCount = state.CumulativeCadenceRevolutionCount;
-	let oldSpeedTime = state.SpeedEventTime;
-	let oldSpeedCount = state.CumulativeSpeedRevolutionCount;
+	const oldCadenceTime = state.CadenceEventTime;
+	const oldCadenceCount = state.CumulativeCadenceRevolutionCount;
+	const oldSpeedTime = state.SpeedEventTime;
+	const oldSpeedCount = state.CumulativeSpeedRevolutionCount;
 
 	let cadenceTime = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA);
 	cadenceTime |= data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 1) << 8;
@@ -51,7 +49,7 @@ const updateState = function (sensor: SpeedCadenceSensor | SpeedCadenceScanner,
 		if (oldCadenceTime > cadenceTime) { //Hit rollover value
 			cadenceTime += (1024 * 64);
 		}
-		let cadence = ((60 * (cadenceCount - oldCadenceCount) * 1024) / (cadenceTime - oldCadenceTime));
+		const cadence = ((60 * (cadenceCount - oldCadenceCount) * 1024) / (cadenceTime - oldCadenceTime));
 		state.CalculatedCadence = cadence;
 		if (!isNaN(state.CalculatedCadence)) {
 			sensor.emit('cadenceData', state);
@@ -65,8 +63,8 @@ const updateState = function (sensor: SpeedCadenceSensor | SpeedCadenceScanner,
 		if (oldSpeedTime > speedEventTime) { //Hit rollover value
 			speedEventTime += (1024 * 64);
 		}
-		let speed = (sensor.wheelCircumference * (speedRevolutionCount - oldSpeedCount) * 1024) / (speedEventTime - oldSpeedTime);
-		let speedMph = speed * 2.237; //according to wolfram alpha
+		const speed = (sensor.wheelCircumference * (speedRevolutionCount - oldSpeedCount) * 1024) / (speedEventTime - oldSpeedTime);
+		const speedMph = speed * 2.237; //according to wolfram alpha
 
 		state.CalculatedSpeed = speedMph;
 		if (!isNaN(state.CalculatedSpeed)) {
@@ -82,7 +80,7 @@ const updateState = function (sensor: SpeedCadenceSensor | SpeedCadenceScanner,
 export class SpeedCadenceSensor extends Ant.AntPlusSensor {
 	channel: number;
 	static deviceType = 0x79;
-	state: SpeedCadenceSensorState;
+	private state: SpeedCadenceSensorState;
 	wheelCircumference: number = 2.118; //This is my 700c wheel, just using as default
 
 	setWheelCircumference(wheelCircumference: number) {
@@ -100,8 +98,8 @@ export class SpeedCadenceSensor extends Ant.AntPlusSensor {
 	}
 
 	decodeData(data: Buffer) {
-		let channel = data.readUInt8(Messages.BUFFER_INDEX_CHANNEL_NUM);
-		let type = data.readUInt8(Messages.BUFFER_INDEX_MSG_TYPE);
+		const channel = data.readUInt8(Messages.BUFFER_INDEX_CHANNEL_NUM);
+		const type = data.readUInt8(Messages.BUFFER_INDEX_MSG_TYPE);
 
 		if (channel !== this.channel) {
 			return;
@@ -132,7 +130,7 @@ export class SpeedCadenceScanner extends Ant.AntPlusScanner {
 	static deviceType = 0x79;
 	wheelCircumference: number = 2.118; //This is my 700c wheel, just using as default
 
-	states: { [id: number]: SpeedCadenceScanState } = {};
+	private states: { [id: number]: SpeedCadenceScanState } = {};
 
 	constructor(stick) {
 		super(stick);
@@ -153,8 +151,8 @@ export class SpeedCadenceScanner extends Ant.AntPlusScanner {
 			return;
 		}
 
-		let deviceId = data.readUInt16LE(Messages.BUFFER_INDEX_EXT_MSG_BEGIN + 1);
-		let deviceType = data.readUInt8(Messages.BUFFER_INDEX_EXT_MSG_BEGIN + 3);
+		const deviceId = data.readUInt16LE(Messages.BUFFER_INDEX_EXT_MSG_BEGIN + 1);
+		const deviceType = data.readUInt8(Messages.BUFFER_INDEX_EXT_MSG_BEGIN + 3);
 
 		if (deviceType !== SpeedCadenceScanner.deviceType) {
 			return;

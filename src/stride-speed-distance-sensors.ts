@@ -1,5 +1,3 @@
-/// <reference path="../typings/index.d.ts"/>
-
 import Ant = require('./ant');
 
 const Constants = Ant.Constants;
@@ -45,7 +43,7 @@ export class StrideSpeedDistanceSensor extends Ant.AntPlusSensor {
 		this.state = new StrideSpeedDistanceSensorState(deviceID);
 	}
 
-	state: StrideSpeedDistanceSensorState;
+	private state: StrideSpeedDistanceSensorState;
 
 	decodeData(data: Buffer) {
 		if (data.readUInt8(Messages.BUFFER_INDEX_CHANNEL_NUM) !== this.channel) {
@@ -110,7 +108,7 @@ export class StrideSpeedDistanceScanner extends Ant.AntPlusScanner {
 		super.scan('receive');
 	}
 
-	states: { [id: number]: StrideSpeedDistanceScanState } = {};
+	private states: { [id: number]: StrideSpeedDistanceScanState } = {};
 
 	decodeData(data: Buffer) {
 		if (data.length <= (Messages.BUFFER_INDEX_EXT_MSG_BEGIN + 3) || !(data.readUInt8(Messages.BUFFER_INDEX_EXT_MSG_BEGIN) & 0x80)) {
@@ -118,8 +116,8 @@ export class StrideSpeedDistanceScanner extends Ant.AntPlusScanner {
 			return;
 		}
 
-		let deviceId = data.readUInt16LE(Messages.BUFFER_INDEX_EXT_MSG_BEGIN + 1);
-		let deviceType = data.readUInt8(Messages.BUFFER_INDEX_EXT_MSG_BEGIN + 3);
+		const deviceId = data.readUInt16LE(Messages.BUFFER_INDEX_EXT_MSG_BEGIN + 1);
+		const deviceType = data.readUInt8(Messages.BUFFER_INDEX_EXT_MSG_BEGIN + 3);
 
 		if (deviceType !== StrideSpeedDistanceScanner.deviceType) {
 			return;
@@ -140,7 +138,7 @@ export class StrideSpeedDistanceScanner extends Ant.AntPlusScanner {
 			case Constants.MESSAGE_CHANNEL_BROADCAST_DATA:
 			case Constants.MESSAGE_CHANNEL_ACKNOWLEDGED_DATA:
 			case Constants.MESSAGE_CHANNEL_BURST_DATA:
-				let page = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA);
+				const page = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA);
 				if (page === 1) {
 					this.states[deviceId].TimeFractional = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 1);
 					this.states[deviceId].TimeInteger = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 2);

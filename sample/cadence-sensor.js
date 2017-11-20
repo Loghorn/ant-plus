@@ -1,8 +1,8 @@
 'use strict';
 
-let Ant = require('..');
-let stick = new Ant.GarminStick2();
-let speedCadenceSensor = new Ant.SpeedCadenceSensor(stick);
+const Ant = require('../ant-plus');
+const stick = new Ant.GarminStick2();
+const speedCadenceSensor = new Ant.SpeedCadenceSensor(stick);
 speedCadenceSensor.setWheelCircumference(2.120); //Wheel circumference in meters
 
 speedCadenceSensor.on('speedData', data => {

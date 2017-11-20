@@ -1,5 +1,3 @@
-/// <reference path="../typings/index.d.ts"/>
-
 import events = require('events');
 
 export enum Constants {
@@ -115,7 +113,7 @@ export class Messages {
 	static BUFFER_INDEX_EXT_MSG_BEGIN: number = 12;
 
 	static resetSystem(): Buffer {
-		let payload: number[] = [];
+		const payload: number[] = [];
 		payload.push(0x00);
 		return this.buildMessage(payload, Constants.MESSAGE_SYSTEM_RESET);
 	}
@@ -128,7 +126,7 @@ export class Messages {
 	}
 
 	static setNetworkKey(): Buffer {
-		let payload: number[] = [];
+		const payload: number[] = [];
 		payload.push(Constants.DEFAULT_NETWORK_NUMBER);
 		payload.push(0xB9);
 		payload.push(0xA5);
@@ -233,7 +231,7 @@ export class Messages {
 	}
 
 	static buildMessage(payload: number[] = [], msgID = 0x00): Buffer {
-		let m: number[] = [];
+		const m: number[] = [];
 		m.push(Constants.MESSAGE_TX_SYNC);
 		m.push(payload.length);
 		m.push(msgID);
@@ -246,8 +244,8 @@ export class Messages {
 
 	static intToLEHexArray(int: number, numBytes = 1): number[] {
 		numBytes = numBytes || 1;
-		let a: number[] = [];
-		let b = new Buffer(this.decimalToHex(int, numBytes * 2), 'hex');
+		const a: number[] = [];
+		const b = new Buffer(this.decimalToHex(int, numBytes * 2), 'hex');
 		let i = b.length - 1;
 		while (i >= 0) {
 			a.push(b[i]);
@@ -275,7 +273,7 @@ export class Messages {
 	}
 }
 
-class USBDriver extends events.EventEmitter {
+export class USBDriver extends events.EventEmitter {
 	private usb = require('usb');
 	private device;
 	private iface;
@@ -453,11 +451,11 @@ export class GarminStick3 extends USBDriver {
 	}
 }
 
-interface IDecodeDataCallback {
+export interface IDecodeDataCallback {
 	(data: Buffer): void;
 }
 
-class BaseSensor extends events.EventEmitter {
+export class BaseSensor extends events.EventEmitter {
 	channel: number;
 	deviceID: number;
 	transmissionType: number;
