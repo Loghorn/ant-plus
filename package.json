@@ -1,6 +1,6 @@
 {
 	"name": "ant-plus",
-	"version": "0.0.12",
+	"version": "0.0.14",
 	"description": "A node module for ANT+",
 	"main": "ant-plus.js",
 	"scripts": {

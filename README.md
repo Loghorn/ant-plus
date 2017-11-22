@@ -110,7 +110,7 @@ Fired after the stick is correctly initialized.
 
 Fired after the stick is correctly closed.
 
-### HeartRateSensor
+### Common to all Sensors
 
 #### methods
 
@@ -132,11 +132,9 @@ Fired after the sensor is correctly attached.
 
 Fired after the sensor is correctly detached.
 
-##### hbdata
+### Common to all Scanners
 
-Fired when new heartbeat data is received.
-
-### HeartRateScanner
+#### methods
 
 ##### scan()
 
@@ -156,33 +154,23 @@ Fired after the sensor is correctly attached.
 
 Fired after the sensor is correctly detached.
 
-##### hbdata
+### HeartRate
+
+#### events
+
+##### hbData
 
 Fired when new heartbeat data is received.
 
-### SpeedCadenceSensor
+### SpeedCadence
 
-##### attach(channel, deviceId)
-
-Attaches the sensor, using the specified channel and deviceId (use 0 to connect to the first device found).
-
-##### detach()
-
-Detaches the sensor.
+#### methods
 
 #### setWheelCircumference(circumferenceInMeters)
 
 Calibrates the speed sensor. Defaults to an ~ 700c wheel, 2.118
 
 #### events
-
-##### attached
-
-Fired after the sensor is correctly attached.
-
-##### detached
-
-Fired after the sensor is correctly detached.
 
 ##### speedData
 
@@ -192,6 +180,18 @@ Fired when a new wheel speed is calculated
 
 Fired when a new pedal cadence is calculated
 
-### StrideSpeedDistanceSensor
+### StrideSpeedDistance
 
-### StrideSpeedDistanceScanner
+#### events
+
+##### ssdData
+
+Fired when new data been calculated.
+
+### BicyclePower
+
+#### events
+
+##### powerData
+
+Fired when new power has been calculated.
