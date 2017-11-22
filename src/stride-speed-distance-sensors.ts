@@ -1,3 +1,8 @@
+/*
+ * ANT+ profile: https://www.thisisant.com/developer/ant-plus/device-profiles/#528_tab
+ * Spec sheet: https://www.thisisant.com/resources/stride-based-speed-and-distance-monitor/
+ */
+
 import Ant = require('./ant');
 
 const Constants = Ant.Constants;
@@ -58,32 +63,7 @@ export class StrideSpeedDistanceSensor extends Ant.AntPlusSensor {
 					this.write(Messages.requestMessage(this.channel, Constants.MESSAGE_CHANNEL_ID));
 				}
 
-				const page = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA);
-				if (page === 1) {
-					this.state.TimeFractional = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 1);
-					this.state.TimeInteger = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 2);
-					this.state.DistanceInteger = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 3);
-					this.state.DistanceFractional = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 4) >>> 4;
-					this.state.SpeedInteger = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 4) & 0x0F;
-					this.state.SpeedFractional = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 5);
-					this.state.StrideCount = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 6);
-					this.state.UpdateLatency = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 7);
-				} else if (page >= 2 && page <= 15) {
-					this.state.CadenceInteger = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 3);
-					this.state.CadenceFractional = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 4) >>> 4;
-					this.state.SpeedInteger = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 4) & 0x0F;
-					this.state.SpeedFractional = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 5);
-					this.state.Status = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 7);
-
-					switch (page) {
-						case 3:
-							this.state.Calories = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 6);
-							break;
-						default:
-							break;
-					}
-				}
-				this.emit('ssddata', this.state);
+				updateState(this, this.state, data);
 				break;
 			case Constants.MESSAGE_CHANNEL_ID:
 				this.deviceID = data.readUInt16LE(Messages.BUFFER_INDEX_MSG_DATA);
@@ -138,35 +118,44 @@ export class StrideSpeedDistanceScanner extends Ant.AntPlusScanner {
 			case Constants.MESSAGE_CHANNEL_BROADCAST_DATA:
 			case Constants.MESSAGE_CHANNEL_ACKNOWLEDGED_DATA:
 			case Constants.MESSAGE_CHANNEL_BURST_DATA:
-				const page = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA);
-				if (page === 1) {
-					this.states[deviceId].TimeFractional = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 1);
-					this.states[deviceId].TimeInteger = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 2);
-					this.states[deviceId].DistanceInteger = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 3);
-					this.states[deviceId].DistanceFractional = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 4) >>> 4;
-					this.states[deviceId].SpeedInteger = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 4) & 0x0F;
-					this.states[deviceId].SpeedFractional = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 5);
-					this.states[deviceId].StrideCount = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 6);
-					this.states[deviceId].UpdateLatency = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 7);
-				} else if (page >= 2 && page <= 15) {
-					this.states[deviceId].CadenceInteger = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 3);
-					this.states[deviceId].CadenceFractional = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 4) >>> 4;
-					this.states[deviceId].SpeedInteger = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 4) & 0x0F;
-					this.states[deviceId].SpeedFractional = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 5);
-					this.states[deviceId].Status = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 7);
-
-					switch (page) {
-						case 3:
-							this.states[deviceId].Calories = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 6);
-							break;
-						default:
-							break;
-					}
-				}
-				this.emit('ssddata', this.states[deviceId]);
+				updateState(this, this.states[deviceId], data);
 				break;
 			default:
 				break;
 		}
 	}
+}
+
+function updateState(
+	sensor: StrideSpeedDistanceSensor | StrideSpeedDistanceScanner,
+	state: StrideSpeedDistanceSensorState | StrideSpeedDistanceScanState,
+	data: Buffer) {
+
+	const page = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA);
+	if (page === 1) {
+		state.TimeFractional = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 1);
+		state.TimeInteger = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 2);
+		state.DistanceInteger = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 3);
+		state.DistanceFractional = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 4) >>> 4;
+		state.SpeedInteger = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 4) & 0x0F;
+		state.SpeedFractional = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 5);
+		state.StrideCount = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 6);
+		state.UpdateLatency = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 7);
+	} else if (page >= 2 && page <= 15) {
+		state.CadenceInteger = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 3);
+		state.CadenceFractional = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 4) >>> 4;
+		state.SpeedInteger = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 4) & 0x0F;
+		state.SpeedFractional = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 5);
+		state.Status = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 7);
+
+		switch (page) {
+			case 3:
+				state.Calories = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 6);
+				break;
+			default:
+				break;
+		}
+	}
+	sensor.emit('ssddata', state);
+	sensor.emit('ssdData', state);
 }
