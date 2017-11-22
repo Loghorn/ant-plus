@@ -499,7 +499,7 @@ export class BaseSensor extends events.EventEmitter {
 					this.write(Messages.setRxExt());
 					break;
 				case Constants.MESSAGE_ENABLE_RX_EXT:
-					this.write(Messages.libConfig(0xC0));
+					this.write(Messages.libConfig(0xE0));
 					break;
 				case Constants.MESSAGE_LIB_CONFIG:
 					this.write(Messages.openRxScan());
@@ -585,6 +585,9 @@ export class BaseSensor extends events.EventEmitter {
 					this.write(Messages.setPeriod(channel, period));
 					break;
 				case Constants.MESSAGE_CHANNEL_PERIOD:
+					this.write(Messages.libConfig(0xE0));
+					break;
+				case Constants.MESSAGE_LIB_CONFIG:
 					this.write(Messages.openChannel(channel));
 					break;
 				case Constants.MESSAGE_CHANNEL_OPEN:
