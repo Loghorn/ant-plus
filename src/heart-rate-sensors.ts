@@ -165,7 +165,6 @@ function updateState(
 		page.pageState = PageState.EXT_PAGE; // set the state to use the extended page format
 		switch (pageNum & ~TOGGLE_MASK) { //check the new pages and remove the toggle bit
 			case 1:
-				console.log(1);
 				//decode the cumulative operating time
 				state.OperatingTime = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 1);
 				state.OperatingTime |= data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 2) << 8;
@@ -173,7 +172,6 @@ function updateState(
 				state.OperatingTime *= 2;
 				break;
 			case 2:
-				console.log(2);
 				//decode the Manufacturer ID
 				state.ManId = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 1);
 				//decode the 4 byte serial number
@@ -182,30 +180,25 @@ function updateState(
 				state.SerialNumber >>>= 0;
 				break;
 			case 3:
-				console.log(3);
 				//decode HW version, SW version, and model number
 				state.HwVersion = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 1);
 				state.SwVersion = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 2);
 				state.ModelNum = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 3);
 				break;
 			case 4:
-				console.log(4);
 				//decode the previous heart beat measurement time
 				state.PreviousBeat = data.readUInt16LE(Messages.BUFFER_INDEX_MSG_DATA + 2);
 				break;
 			case 5:
-				console.log(5);
 				state.IntervalAverage = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 1);
 				state.IntervalMax = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 2);
 				state.SessionAverage = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 3);
 				break;
 			case 6:
-				console.log(6);
 				state.SupportedFeatures = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 2);
 				state.EnabledFeatures = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 3);
 				break;
 			case 7:
-				console.log(7);
 				const batteryLevel = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 1);
 				const batteryFrac = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 2);
 				const batteryStatus = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 3);
