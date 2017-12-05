@@ -2,7 +2,7 @@
 
 let Ant = require('../ant-plus');
 let stick = new Ant.GarminStick2();
-let bicyclePowerSensor = new Ant.bicyclePowerSensor(stick);
+let bicyclePowerSensor = new Ant.BicyclePowerSensor(stick);
 
 
 bicyclePowerSensor.on('powerData', data => {
