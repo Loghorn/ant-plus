@@ -195,3 +195,11 @@ Fired when new data been calculated.
 ##### powerData
 
 Fired when new power has been calculated.
+
+### FitnessEquipment
+
+#### events
+
+##### fitnessData
+
+Fired when new data is received.
