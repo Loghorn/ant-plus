@@ -37,7 +37,7 @@ var sensor = new Ant.HeartRateSensor(stick);
 #### Attach events
 
 ```javascript
-sensor.on('hbdata', function (data) {
+sensor.on('hbData', function (data) {
     console.log(data.DeviceID, data.ComputedHeartRate);
 });
 
@@ -57,7 +57,7 @@ if (!stick.open()) {
 ### scanning
 
 ```javascript
-sensor.on('hbdata', function (data) {
+sensor.on('hbData', function (data) {
     console.log(data.DeviceID, data.ComputedHeartRate);
 });
 
@@ -95,6 +95,11 @@ Checks if the stick is present. Returns true if it is, false otherwise.
 ##### open()
 
 Tries to open the stick. Returns false on failure.
+
+##### openAsync(callback)
+
+Tries to open the stick, waiting for it if not available right now. Returns a cancelation token with a method `cancel` you can use to stop waiting.
+`callback` is a funcion accepting a single `Error` parameter and it will be called when the stick is open (with the parameter undefined) or in case of failure (with the parameter set to the error).
 
 ##### close()
 

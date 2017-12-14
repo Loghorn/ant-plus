@@ -1,5 +1,7 @@
 import events = require('events');
 
+import usb = require('usb');
+
 export enum Constants {
 	MESSAGE_TX_SYNC = 0xA4,
 	DEFAULT_NETWORK_NUMBER = 0x00,
@@ -198,7 +200,7 @@ export class Messages {
 		return this.buildMessage(payload, Constants.MESSAGE_ENABLE_RX_EXT);
 	}
 
-	static libConfig(channel: number,how: number): Buffer {
+	static libConfig(channel: number, how: number): Buffer {
 		let payload: number[] = [];
 		payload = payload.concat(this.intToLEHexArray(channel));
 		payload = payload.concat(this.intToLEHexArray(how));
@@ -273,12 +275,30 @@ export class Messages {
 	}
 }
 
+export interface ICancellationToken {
+	cancel(): void;
+}
+
+class CancellationTokenListener {
+	_completed = false;
+	constructor(private fn: (d: any) => void, private cb: (err: Error) => void) { }
+	cancel() {
+		if (!this._completed) {
+			this._completed = true;
+			// @ts-ignore
+			usb.removeListener('attach', this.fn);
+			this.cb(new Error('Canceled'));
+		}
+	}
+}
+
 export class USBDriver extends events.EventEmitter {
-	private usb = require('usb');
-	private device;
-	private iface;
-	private inEp;
-	private outEp;
+	private static deviceInUse: usb.Device[] = [];
+	private device: usb.Device;
+	private iface: usb.Interface;
+	private detachedKernelDriver = false;
+	private inEp: usb.InEndpoint & events.EventEmitter;
+	private outEp: usb.OutEndpoint & events.EventEmitter;
 	private leftover: Buffer;
 	private usedChannels: number = 0;
 	private attachedSensors: BaseSensor[] = [];
@@ -288,22 +308,50 @@ export class USBDriver extends events.EventEmitter {
 
 	constructor(private idVendor: number, private idProduct: number, dbgLevel = 0) {
 		super();
-		this.usb.setDebugLevel(dbgLevel);
+		usb.setDebugLevel(dbgLevel);
+	}
+
+	private getDevices() {
+		const allDevices = usb.getDeviceList();
+		return allDevices
+			.filter((d) => d.deviceDescriptor.idVendor === this.idVendor && d.deviceDescriptor.idProduct === this.idProduct)
+			.filter(d => USBDriver.deviceInUse.indexOf(d) === -1);
 	}
 
 	is_present(): boolean {
-		return this.usb.findByIds(this.idVendor, this.idProduct);
+		return this.getDevices().length > 0;
 	}
 
 	open(): boolean {
-		this.device = this.usb.findByIds(this.idVendor, this.idProduct);
+		const devices = this.getDevices();
+		while (devices.length) {
+			try {
+				this.device = devices.shift();
+				this.device.open();
+				this.iface = this.device.interfaces[0];
+				try {
+					if (this.iface.isKernelDriverActive()) {
+						this.detachedKernelDriver = true;
+						this.iface.detachKernelDriver();
+					}
+				} catch {
+					// Ignore kernel driver errors;
+				}
+				this.iface.claim();
+				break;
+			} catch {
+				// Ignore the error and try with the next device, if present
+				this.device.close();
+				this.device = undefined;
+				this.iface = undefined;
+			}
+		}
 		if (!this.device) {
 			return false;
 		}
-		this.device.open();
-		this.iface = this.device.interfaces[0];
-		this.iface.claim();
-		this.inEp = this.iface.endpoints[0];
+		USBDriver.deviceInUse.push(this.device);
+
+		this.inEp = this.iface.endpoints[0] as usb.InEndpoint & events.EventEmitter;
 
 		this.inEp.on('data', (data: Buffer) => {
 			if (!data.length) {
@@ -348,19 +396,78 @@ export class USBDriver extends events.EventEmitter {
 
 		this.inEp.startPoll();
 
-		this.outEp = this.iface.endpoints[1];
+		this.outEp = this.iface.endpoints[1] as usb.OutEndpoint & events.EventEmitter;
 
 		this.reset();
 
 		return true;
 	}
 
+	openAsync(cb: (err: Error) => void): ICancellationToken {
+		let ct: CancellationTokenListener;
+		const doOpen = () => {
+			try {
+				const result = this.open();
+				if (result) {
+					ct._completed = true;
+					try {
+						cb(undefined);
+					} catch {
+						// ignore errors
+					}
+				} else {
+					return false;
+				}
+			} catch (err) {
+				cb(err);
+			}
+			return true;
+		};
+		const fn = (d) => {
+			if (!d || (d.deviceDescriptor.idVendor === this.idVendor && d.deviceDescriptor.idProduct === this.idProduct)) {
+				if (doOpen()) {
+					// @ts-ignore
+					usb.removeListener('attach', fn);
+				}
+			}
+		};
+		usb.on('attach', fn);
+		if (this.is_present()) {
+			// @ts-ignore
+			setImmediate(() => usb.emit('attach', this.device));
+		}
+		return ct = new CancellationTokenListener(fn, cb);
+	}
+
 	close() {
 		this.detach_all();
-		this.inEp.stopPoll();
-		this.device.reset(() => {
-			this.device.close();
-			this.emit('shutdown');
+		this.inEp.stopPoll(() => {
+			// @ts-ignore
+			this.iface.release(true, () => {
+				if (this.detachedKernelDriver) {
+					this.detachedKernelDriver = false;
+					try {
+						this.iface.attachKernelDriver();
+					} catch {
+						// Ignore kernel driver errors;
+					}
+				}
+				this.iface = undefined;
+				this.device.reset(() => {
+					this.device.close();
+					this.emit('shutdown');
+					const devIdx = USBDriver.deviceInUse.indexOf(this.device);
+					if (devIdx >= 0) {
+						USBDriver.deviceInUse.splice(devIdx, 1);
+					}
+					// @ts-ignore
+					if (usb.listenerCount('attach')) {
+						// @ts-ignore
+						usb.emit('attach', this.device);
+					}
+					this.device = undefined;
+				});
+			});
 		});
 	}
 
@@ -499,7 +606,7 @@ export class BaseSensor extends events.EventEmitter {
 					this.write(Messages.setRxExt());
 					break;
 				case Constants.MESSAGE_ENABLE_RX_EXT:
-					this.write(Messages.libConfig(channel,0xE0));
+					this.write(Messages.libConfig(channel, 0xE0));
 					break;
 				case Constants.MESSAGE_LIB_CONFIG:
 					this.write(Messages.openRxScan());
@@ -585,7 +692,7 @@ export class BaseSensor extends events.EventEmitter {
 					this.write(Messages.setPeriod(channel, period));
 					break;
 				case Constants.MESSAGE_CHANNEL_PERIOD:
-					this.write(Messages.libConfig(channel,0xE0));
+					this.write(Messages.libConfig(channel, 0xE0));
 					break;
 				case Constants.MESSAGE_LIB_CONFIG:
 					this.write(Messages.openChannel(channel));

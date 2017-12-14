@@ -1,6 +1,6 @@
 {
 	"name": "ant-plus",
-	"version": "0.0.17",
+	"version": "0.0.18",
 	"description": "A node module for ANT+",
 	"main": "ant-plus.js",
 	"scripts": {
@@ -16,12 +16,16 @@
 		"email": "alessandro.vergani@gmail.com"
 	},
 	"license": "MIT",
+	"engines": {
+		"node": ">=6.0.0"
+	},
 	"dependencies": {
-		"usb": "^1.2.0"
+		"usb": "^1.3.1"
 	},
 	"devDependencies": {
-		"typescript": "^2.6.1",
-		"@types/node": "^6.0.0"
+		"typescript": "^2.6.2",
+		"@types/node": "^6.0.0",
+		"@types/usb": "^1.1.4"
 	},
 	"files": [
 		"ant-plus.js",
