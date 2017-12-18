@@ -61,7 +61,7 @@ function openStick(stick, stickid) {
 	stick.on('shutdown', function() { console.log(stickid, 'shutdown'); });
 
 	function tryOpen(stick) {
-		let token = stick.openAsync((err, result) => {
+		let token = stick.openAsync((err) => {
 			token = null;
 			if (err) {
 				console.error(stickid, err);

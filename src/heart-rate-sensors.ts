@@ -198,7 +198,7 @@ function updateState(
 				state.SupportedFeatures = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 2);
 				state.EnabledFeatures = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 3);
 				break;
-			case 7:
+			case 7: {
 				const batteryLevel = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 1);
 				const batteryFrac = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 2);
 				const batteryStatus = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 3);
@@ -229,6 +229,7 @@ function updateState(
 						break;
 				}
 				break;
+			}
 			default:
 				break;
 		}

@@ -14,43 +14,43 @@ class FitnessEquipmentSensorState {
 	}
 
 	DeviceID: number;
-	temperature?: number;
-	zeroOffset?: number;
-	spinDownTime?: number;
+	Temperature?: number;
+	ZeroOffset?: number;
+	SpinDownTime?: number;
 
-	equipmentType?: 'Treadmill' | 'Elliptical' | 'StationaryBike' | 'Rower' | 'Climber' | 'NordicSkier' | 'Trainer' | 'General';
-	elapsedTime?: number;
-	distance?: number;
-	realSpeed?: number;
-	virtualSpeed?: number;
-	heartRate?: number;
-	heartRateSource?: 'HandContact' | 'EM' | 'ANT+';
-	state?: 'OFF' | 'READY' | 'IN_USE' | 'FINISHED';
+	EquipmentType?: 'Treadmill' | 'Elliptical' | 'StationaryBike' | 'Rower' | 'Climber' | 'NordicSkier' | 'Trainer' | 'General';
+	ElapsedTime?: number;
+	Distance?: number;
+	RealSpeed?: number;
+	VirtualSpeed?: number;
+	HeartRate?: number;
+	HeartRateSource?: 'HandContact' | 'EM' | 'ANT+';
+	State?: 'OFF' | 'READY' | 'IN_USE' | 'FINISHED';
 
-	cycleLength?: number;
-	incline?: number;
-	resistance?: number;
+	CycleLength?: number;
+	Incline?: number;
+	Resistance?: number;
 
 	METs?: number;
-	caloricBurnRate?: number;
-	calories?: number;
+	CaloricBurnRate?: number;
+	Calories?: number;
 
 	_EventCount0x19?: number;
-	cadence?: number;
-	accumulatedPower?: number;
-	instantaneousPower?: number;
-	averagePower?: number;
-	trainerStatus?: number;
-	targetStatus?: 'OnTarget' | 'LowSpeed' | 'HighSpeed';
+	Cadence?: number;
+	AccumulatedPower?: number;
+	InstantaneousPower?: number;
+	AveragePower?: number;
+	TrainerStatus?: number;
+	TargetStatus?: 'OnTarget' | 'LowSpeed' | 'HighSpeed';
 
-	hwRevision?: number;
-	manufacturerId?: number;
-	modelNumber?: number;
+	HwVersion?: number;
+	ManId?: number;
+	ModelNum?: number;
 
-	softwareRevision?: number;
-	serial?: number;
+	SwVersion?: number;
+	SerialNumber?: number;
 
-	pairedDevices: any[] = [];
+	PairedDevices: any[] = [];
 }
 
 class FitnessEquipmentScanState extends FitnessEquipmentSensorState {
@@ -152,25 +152,25 @@ export class FitnessEquipmentScanner extends Ant.AntPlusScanner {
 }
 
 function resetState(state: FitnessEquipmentSensorState | FitnessEquipmentScanState) {
-	delete state.elapsedTime;
-	delete state.distance;
-	delete state.realSpeed;
-	delete state.virtualSpeed;
-	delete state.heartRate;
-	delete state.heartRateSource;
-	delete state.cycleLength;
-	delete state.incline;
-	delete state.resistance;
+	delete state.ElapsedTime;
+	delete state.Distance;
+	delete state.RealSpeed;
+	delete state.VirtualSpeed;
+	delete state.HeartRate;
+	delete state.HeartRateSource;
+	delete state.CycleLength;
+	delete state.Incline;
+	delete state.Resistance;
 	delete state.METs;
-	delete state.caloricBurnRate;
-	delete state.calories;
+	delete state.CaloricBurnRate;
+	delete state.Calories;
 	delete state._EventCount0x19;
-	delete state.cadence;
-	delete state.accumulatedPower;
-	delete state.instantaneousPower;
-	delete state.averagePower;
-	delete state.trainerStatus;
-	delete state.targetStatus;
+	delete state.Cadence;
+	delete state.AccumulatedPower;
+	delete state.InstantaneousPower;
+	delete state.AveragePower;
+	delete state.TrainerStatus;
+	delete state.TargetStatus;
 }
 
 function updateState(
@@ -183,28 +183,28 @@ function updateState(
 		case 0x01: {
 			const temperature = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 3);
 			if (temperature !== 0xFF) {
-				state.temperature = -25 + temperature * 0.5;
+				state.Temperature = -25 + temperature * 0.5;
 			}
 			const calBF = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 1);
 			if (calBF & 0x40) {
-				state.zeroOffset = data.readUInt16LE(Messages.BUFFER_INDEX_MSG_DATA + 4);
+				state.ZeroOffset = data.readUInt16LE(Messages.BUFFER_INDEX_MSG_DATA + 4);
 			}
 			if (calBF & 0x80) {
-				state.spinDownTime = data.readUInt16LE(Messages.BUFFER_INDEX_MSG_DATA + 6);
+				state.SpinDownTime = data.readUInt16LE(Messages.BUFFER_INDEX_MSG_DATA + 6);
 			}
 			break;
 		}
 		case 0x10: {
 			const equipmentTypeBF = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 1);
 			switch (equipmentTypeBF & 0x1F) {
-				case 19: state.equipmentType = 'Treadmill'; break;
-				case 20: state.equipmentType = 'Elliptical'; break;
-				case 21: state.equipmentType = 'StationaryBike'; break;
-				case 22: state.equipmentType = 'Rower'; break;
-				case 23: state.equipmentType = 'Climber'; break;
-				case 24: state.equipmentType = 'NordicSkier'; break;
-				case 25: state.equipmentType = 'Trainer'; break;
-				default: state.equipmentType = 'General'; break;
+				case 19: state.EquipmentType = 'Treadmill'; break;
+				case 20: state.EquipmentType = 'Elliptical'; break;
+				case 21: state.EquipmentType = 'StationaryBike'; break;
+				case 22: state.EquipmentType = 'Rower'; break;
+				case 23: state.EquipmentType = 'Climber'; break;
+				case 24: state.EquipmentType = 'NordicSkier'; break;
+				case 25: state.EquipmentType = 'Trainer'; break;
+				default: state.EquipmentType = 'General'; break;
 			}
 			let elapsedTime = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 2);
 			let distance = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 3);
@@ -214,61 +214,61 @@ function updateState(
 			if (heartRate !== 0xFF) {
 				switch (capStateBF & 0x03) {
 					case 3: {
-						state.heartRate = heartRate;
-						state.heartRateSource = 'HandContact';
+						state.HeartRate = heartRate;
+						state.HeartRateSource = 'HandContact';
 						break;
 					}
 					case 2: {
-						state.heartRate = heartRate;
-						state.heartRateSource = 'EM';
+						state.HeartRate = heartRate;
+						state.HeartRateSource = 'EM';
 						break;
 					}
 					case 1: {
-						state.heartRate = heartRate;
-						state.heartRateSource = 'ANT+';
+						state.HeartRate = heartRate;
+						state.HeartRateSource = 'ANT+';
 						break;
 					}
 					default: {
-						delete state.heartRate;
-						delete state.heartRateSource;
+						delete state.HeartRate;
+						delete state.HeartRateSource;
 						break;
 					}
 				}
 			}
 
 			elapsedTime /= 4;
-			const oldElapsedTime = (state.elapsedTime || 0) % 64;
+			const oldElapsedTime = (state.ElapsedTime || 0) % 64;
 			if (elapsedTime !== oldElapsedTime) {
 				if (oldElapsedTime > elapsedTime) { //Hit rollover value
 					elapsedTime += 64;
 				}
 			}
-			state.elapsedTime = (state.elapsedTime || 0) + elapsedTime - oldElapsedTime;
+			state.ElapsedTime = (state.ElapsedTime || 0) + elapsedTime - oldElapsedTime;
 
 			if (capStateBF & 0x04) {
-				const oldDistance = (state.distance || 0) % 256;
+				const oldDistance = (state.Distance || 0) % 256;
 				if (distance !== oldDistance) {
 					if (oldDistance > distance) { //Hit rollover value
 						distance += 256;
 					}
 				}
-				state.distance = (state.distance || 0) + distance - oldDistance;
+				state.Distance = (state.Distance || 0) + distance - oldDistance;
 			} else {
-				delete state.distance;
+				delete state.Distance;
 			}
 			if (capStateBF & 0x08) {
-				state.virtualSpeed = speed / 1000;
-				delete state.realSpeed;
+				state.VirtualSpeed = speed / 1000;
+				delete state.RealSpeed;
 			} else {
-				delete state.virtualSpeed;
-				state.realSpeed = speed / 1000;
+				delete state.VirtualSpeed;
+				state.RealSpeed = speed / 1000;
 			}
 			switch ((capStateBF & 0x70) >> 4) {
-				case 1: state.state = 'OFF'; break;
-				case 2: state.state = 'READY'; resetState(state); break;
-				case 3: state.state = 'IN_USE'; break;
-				case 4: state.state = 'FINISHED'; break;
-				default: delete state.state; break;
+				case 1: state.State = 'OFF'; break;
+				case 2: state.State = 'READY'; resetState(state); break;
+				case 3: state.State = 'IN_USE'; break;
+				case 4: state.State = 'FINISHED'; break;
+				default: delete state.State; break;
 			}
 			if (capStateBF & 0x80) {
 				// lap
@@ -281,20 +281,20 @@ function updateState(
 			const resistance = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 6);
 			const capStateBF = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 7);
 			if (cycleLen !== 0xFF) {
-				state.cycleLength = cycleLen / 100;
+				state.CycleLength = cycleLen / 100;
 			}
 			if (incline >= -10000 && incline <= 10000) {
-				state.incline = incline / 100;
+				state.Incline = incline / 100;
 			}
 			if (resistance !== 0xFF) {
-				state.resistance = resistance;
+				state.Resistance = resistance;
 			}
 			switch ((capStateBF & 0x70) >> 4) {
-				case 1: state.state = 'OFF'; break;
-				case 2: state.state = 'READY'; resetState(state); break;
-				case 3: state.state = 'IN_USE'; break;
-				case 4: state.state = 'FINISHED'; break;
-				default: delete state.state; break;
+				case 1: state.State = 'OFF'; break;
+				case 2: state.State = 'READY'; resetState(state); break;
+				case 3: state.State = 'IN_USE'; break;
+				case 4: state.State = 'FINISHED'; break;
+				default: delete state.State; break;
 			}
 			if (capStateBF & 0x80) {
 				// lap
@@ -310,17 +310,17 @@ function updateState(
 				state.METs = mets / 100;
 			}
 			if (caloricbr !== 0xFFFF) {
-				state.caloricBurnRate = caloricbr / 10;
+				state.CaloricBurnRate = caloricbr / 10;
 			}
 			if (capStateBF & 0x01) {
-				state.calories = calories;
+				state.Calories = calories;
 			}
 			switch ((capStateBF & 0x70) >> 4) {
-				case 1: state.state = 'OFF'; break;
-				case 2: state.state = 'READY'; resetState(state); break;
-				case 3: state.state = 'IN_USE'; break;
-				case 4: state.state = 'FINISHED'; break;
-				default: delete state.state; break;
+				case 1: state.State = 'OFF'; break;
+				case 2: state.State = 'READY'; resetState(state); break;
+				case 3: state.State = 'IN_USE'; break;
+				case 4: state.State = 'FINISHED'; break;
+				default: delete state.State; break;
 			}
 			if (capStateBF & 0x80) {
 				// lap
@@ -345,38 +345,38 @@ function updateState(
 			}
 
 			if (cadence !== 0xFF) {
-				state.cadence = cadence;
+				state.Cadence = cadence;
 			}
 
 			if (power !== 0xFFF) {
-				state.instantaneousPower = power;
+				state.InstantaneousPower = power;
 
-				const oldAccPower = (state.accumulatedPower || 0) % 65536;
+				const oldAccPower = (state.AccumulatedPower || 0) % 65536;
 				if (accPower !== oldAccPower) {
 					if (oldAccPower > accPower) {
 						accPower += 65536;
 					}
 				}
-				state.accumulatedPower = (state.accumulatedPower || 0) + accPower - oldAccPower;
+				state.AccumulatedPower = (state.AccumulatedPower || 0) + accPower - oldAccPower;
 
-				state.averagePower = (accPower - oldAccPower) / (eventCount - oldEventCount);
+				state.AveragePower = (accPower - oldAccPower) / (eventCount - oldEventCount);
 			}
 
-			state.trainerStatus = trainerStatus;
+			state.TrainerStatus = trainerStatus;
 
 			switch (flagStateBF & 0x03) {
-				case 0: state.targetStatus = 'OnTarget'; break;
-				case 1: state.targetStatus = 'LowSpeed'; break;
-				case 2: state.targetStatus = 'HighSpeed'; break;
-				default: delete state.targetStatus; break;
+				case 0: state.TargetStatus = 'OnTarget'; break;
+				case 1: state.TargetStatus = 'LowSpeed'; break;
+				case 2: state.TargetStatus = 'HighSpeed'; break;
+				default: delete state.TargetStatus; break;
 			}
 
 			switch ((flagStateBF & 0x70) >> 4) {
-				case 1: state.state = 'OFF'; break;
-				case 2: state.state = 'READY'; resetState(state); break;
-				case 3: state.state = 'IN_USE'; break;
-				case 4: state.state = 'FINISHED'; break;
-				default: delete state.state; break;
+				case 1: state.State = 'OFF'; break;
+				case 2: state.State = 'READY'; resetState(state); break;
+				case 3: state.State = 'IN_USE'; break;
+				case 4: state.State = 'FINISHED'; break;
+				default: delete state.State; break;
 			}
 			if (flagStateBF & 0x80) {
 				// lap
@@ -385,9 +385,9 @@ function updateState(
 			break;
 		}
 		case 0x50: {
-			state.hwRevision = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 3);
-			state.manufacturerId = data.readUInt16LE(Messages.BUFFER_INDEX_MSG_DATA + 4);
-			state.modelNumber = data.readUInt16LE(Messages.BUFFER_INDEX_MSG_DATA + 6);
+			state.HwVersion = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 3);
+			state.ManId = data.readUInt16LE(Messages.BUFFER_INDEX_MSG_DATA + 4);
+			state.ModelNum = data.readUInt16LE(Messages.BUFFER_INDEX_MSG_DATA + 6);
 			break;
 		}
 		case 0x51: {
@@ -395,14 +395,14 @@ function updateState(
 			const swRevMain = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 3);
 			const serial = data.readInt32LE(Messages.BUFFER_INDEX_MSG_DATA + 4);
 
-			state.softwareRevision = swRevMain;
+			state.SwVersion = swRevMain;
 
 			if (swRevSup !== 0xFF) {
-				state.softwareRevision += swRevSup / 1000;
+				state.SwVersion += swRevSup / 1000;
 			}
 
 			if (serial !== 0xFFFFFFFF) {
-				state.serial = serial;
+				state.SerialNumber = serial;
 			}
 
 			break;
@@ -416,11 +416,11 @@ function updateState(
 			const devType = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 7);
 
 			if (idx === 0) {
-				state.pairedDevices = [];
+				state.PairedDevices = [];
 			}
 
 			if (tot > 0) {
-				state.pairedDevices.push({ id: devId, type: devType, paired: (chState & 0x80) ? true : false });
+				state.PairedDevices.push({ id: devId, type: devType, paired: (chState & 0x80) ? true : false });
 			}
 
 			break;
