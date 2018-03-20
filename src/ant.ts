@@ -351,7 +351,7 @@ export class USBDriver extends events.EventEmitter {
 		}
 		USBDriver.deviceInUse.push(this.device);
 
-		this.inEp = this.iface.endpoints[0] as usb.InEndpoint & events.EventEmitter;
+		this.inEp = this.iface.endpoints[0] as usb.InEndpoint;
 
 		this.inEp.on('data', (data: Buffer) => {
 			if (!data.length) {
@@ -396,7 +396,7 @@ export class USBDriver extends events.EventEmitter {
 
 		this.inEp.startPoll();
 
-		this.outEp = this.iface.endpoints[1] as usb.OutEndpoint & events.EventEmitter;
+		this.outEp = this.iface.endpoints[1] as usb.OutEndpoint;
 
 		this.reset();
 
