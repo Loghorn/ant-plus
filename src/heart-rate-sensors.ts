@@ -18,12 +18,12 @@ class HeartRateSensorState {
 	BeatCount: number;
 	ComputedHeartRate: number;
 	OperatingTime?: number;
-	ManId: number;
-	SerialNumber: number;
-	HwVersion: number;
-	SwVersion: number;
-	ModelNum: number;
-	PreviousBeat: number;
+	ManId?: number;
+	SerialNumber?: number;
+	HwVersion?: number;
+	SwVersion?: number;
+	ModelNum?: number;
+	PreviousBeat?: number;
 
 	IntervalAverage?: number;
 	IntervalMax?: number;
@@ -206,7 +206,7 @@ function updateState(
 					state.BatteryLevel = batteryLevel;
 				}
 				state.BatteryVoltage = (batteryStatus & 0x0F) + (batteryFrac / 256);
-				const batteryFlags = batteryStatus & 0x70;
+				const batteryFlags = (batteryStatus & 0x70) >>> 4;
 				switch (batteryFlags) {
 					case 1:
 						state.BatteryStatus = 'New';
