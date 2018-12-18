@@ -241,13 +241,13 @@ export class Messages {
 			m.push(byte);
 		});
 		m.push(this.getChecksum(m));
-		return new Buffer(m);
+		return Buffer.from(m);
 	}
 
 	static intToLEHexArray(int: number, numBytes = 1): number[] {
 		numBytes = numBytes || 1;
 		const a: number[] = [];
-		const b = new Buffer(this.decimalToHex(int, numBytes * 2), 'hex');
+		const b = Buffer.from(this.decimalToHex(int, numBytes * 2), 'hex');
 		let i = b.length - 1;
 		while (i >= 0) {
 			a.push(b[i]);
