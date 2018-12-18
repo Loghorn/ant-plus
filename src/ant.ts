@@ -308,6 +308,7 @@ export class USBDriver extends events.EventEmitter {
 
 	constructor(private idVendor: number, private idProduct: number, dbgLevel = 0) {
 		super();
+		this.setMaxListeners(50);
 		usb.setDebugLevel(dbgLevel);
 	}
 
