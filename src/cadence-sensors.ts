@@ -154,7 +154,7 @@ function updateState(sensor: CadenceSensor | CadenceScanner, state: CadenceSenso
 			//decode the Manufacturer ID
 			state.ManId = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 1);
 			//decode the 4 byte serial number
-			state.SerialNumber = sensor.deviceID;
+			state.SerialNumber = state.DeviceID;
 			state.SerialNumber |= data.readUInt16LE(Messages.BUFFER_INDEX_MSG_DATA + 2) << 16;
 			state.SerialNumber >>>= 0;
 			break;
