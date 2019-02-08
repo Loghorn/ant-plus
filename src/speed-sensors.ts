@@ -205,13 +205,18 @@ function updateState(sensor: SpeedSensor | SpeedScanner, state: SpeedSensorState
 	const oldSpeedCount = state.CumulativeSpeedRevolutionCount;
 
 	let speedEventTime = data.readUInt16LE(Messages.BUFFER_INDEX_MSG_DATA + 4);
-	const speedRevolutionCount = data.readUInt16LE(Messages.BUFFER_INDEX_MSG_DATA + 6);
+	let speedRevolutionCount = data.readUInt16LE(Messages.BUFFER_INDEX_MSG_DATA + 6);
 
 	if (speedEventTime !== oldSpeedTime) {
 		state.SpeedEventTime = speedEventTime;
 		state.CumulativeSpeedRevolutionCount = speedRevolutionCount;
+
 		if (oldSpeedTime > speedEventTime) { //Hit rollover value
 			speedEventTime += (1024 * 64);
+		}
+
+		if (oldSpeedCount > speedRevolutionCount) { //Hit rollover value
+			speedRevolutionCount += (1024 * 64);
 		}
 
 		const distance = sensor.wheelCircumference * (speedRevolutionCount - oldSpeedCount);

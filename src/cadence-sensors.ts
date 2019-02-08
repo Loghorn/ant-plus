@@ -204,13 +204,18 @@ function updateState(sensor: CadenceSensor | CadenceScanner, state: CadenceSenso
 	const oldCadenceCount = state.CumulativeCadenceRevolutionCount;
 
 	let cadenceTime = data.readUInt16LE(Messages.BUFFER_INDEX_MSG_DATA + 4);
-	const cadenceCount = data.readUInt16LE(Messages.BUFFER_INDEX_MSG_DATA + 6);
+	let cadenceCount = data.readUInt16LE(Messages.BUFFER_INDEX_MSG_DATA + 6);
 
 	if (cadenceTime !== oldCadenceTime) {
 		state.CadenceEventTime = cadenceTime;
 		state.CumulativeCadenceRevolutionCount = cadenceCount;
+
 		if (oldCadenceTime > cadenceTime) { //Hit rollover value
 			cadenceTime += (1024 * 64);
+		}
+
+		if (oldCadenceCount > cadenceCount) { //Hit rollover value
+			cadenceCount += (1024 * 64);
 		}
 
 		const cadence = ((60 * (cadenceCount - oldCadenceCount) * 1024) / (cadenceTime - oldCadenceTime));
