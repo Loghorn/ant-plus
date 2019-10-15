@@ -3,10 +3,7 @@
  * Spec sheet: https://www.thisisant.com/resources/bicycle-speed-and-cadence/
  */
 
-import Ant = require('./ant');
-
-const Messages = Ant.Messages;
-const Constants = Ant.Constants;
+import { AntPlusSensor, AntPlusScanner, Messages } from './ant';
 
 class SpeedCadenceSensorState {
 	constructor(deviceID: number) {
@@ -28,17 +25,12 @@ class SpeedCadenceScanState extends SpeedCadenceSensorState {
 	Threshold: number;
 }
 
-export class SpeedCadenceSensor extends Ant.AntPlusSensor {
-	constructor(stick) {
-		super(stick);
-		this.decodeDataCbk = this.decodeData.bind(this);
-	}
-
+export class SpeedCadenceSensor extends AntPlusSensor {
 	static deviceType = 0x79;
 
-	wheelCircumference: number = 2.118; //This is my 700c wheel, just using as default
+	wheelCircumference: number = 2.199; // default 70cm wheel
 
-	setWheelCircumference(wheelCircumference: number) {
+	public setWheelCircumference(wheelCircumference: number) {
 		this.wheelCircumference = wheelCircumference;
 	}
 
@@ -49,86 +41,38 @@ export class SpeedCadenceSensor extends Ant.AntPlusSensor {
 
 	private state: SpeedCadenceSensorState;
 
-	decodeData(data: Buffer) {
-		if (data.readUInt8(Messages.BUFFER_INDEX_CHANNEL_NUM) !== this.channel) {
-			return;
-		}
-
-		switch (data.readUInt8(Messages.BUFFER_INDEX_MSG_TYPE)) {
-			case Constants.MESSAGE_CHANNEL_BROADCAST_DATA:
-			case Constants.MESSAGE_CHANNEL_ACKNOWLEDGED_DATA:
-			case Constants.MESSAGE_CHANNEL_BURST_DATA:
-				if (this.deviceID === 0) {
-					this.write(Messages.requestMessage(this.channel, Constants.MESSAGE_CHANNEL_ID));
-				}
-
-				updateState(this, this.state, data);
-				break;
-			case Constants.MESSAGE_CHANNEL_ID:
-				this.deviceID = data.readUInt16LE(Messages.BUFFER_INDEX_MSG_DATA);
-				this.transmissionType = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 3);
-				this.state.DeviceID = this.deviceID;
-				break;
-			default:
-				break;
-		}
+	protected updateState(deviceId, data) {
+		this.state.DeviceID = deviceId;
+		updateState(this, this.state, data);
 	}
-
 }
 
-export class SpeedCadenceScanner extends Ant.AntPlusScanner {
-	constructor(stick) {
-		super(stick);
-		this.decodeDataCbk = this.decodeData.bind(this);
+export class SpeedCadenceScanner extends AntPlusScanner {
+	protected deviceType() {
+		return SpeedCadenceSensor.deviceType;
 	}
 
-	static deviceType = 0x79;
+	wheelCircumference: number = 2.199; // default 70cm wheel
 
-	wheelCircumference: number = 2.118; //This is my 700c wheel, just using as default
-
-	setWheelCircumference(wheelCircumference: number) {
+	public setWheelCircumference(wheelCircumference: number) {
 		this.wheelCircumference = wheelCircumference;
-	}
-
-	public scan() {
-		super.scan('receive');
 	}
 
 	private states: { [id: number]: SpeedCadenceScanState } = {};
 
-	decodeData(data: Buffer) {
-		if (data.length <= (Messages.BUFFER_INDEX_EXT_MSG_BEGIN + 3) || !(data.readUInt8(Messages.BUFFER_INDEX_EXT_MSG_BEGIN) & 0x80)) {
-			console.log('wrong message format');
-			return;
-		}
-
-		const deviceId = data.readUInt16LE(Messages.BUFFER_INDEX_EXT_MSG_BEGIN + 1);
-		const deviceType = data.readUInt8(Messages.BUFFER_INDEX_EXT_MSG_BEGIN + 3);
-
-		if (deviceType !== SpeedCadenceScanner.deviceType) {
-			return;
-		}
-
+	protected createStateIfNew(deviceId) {
 		if (!this.states[deviceId]) {
 			this.states[deviceId] = new SpeedCadenceScanState(deviceId);
 		}
+	}
 
-		if (data.readUInt8(Messages.BUFFER_INDEX_EXT_MSG_BEGIN) & 0x40) {
-			if (data.readUInt8(Messages.BUFFER_INDEX_EXT_MSG_BEGIN + 5) === 0x20) {
-				this.states[deviceId].Rssi = data.readInt8(Messages.BUFFER_INDEX_EXT_MSG_BEGIN + 6);
-				this.states[deviceId].Threshold = data.readInt8(Messages.BUFFER_INDEX_EXT_MSG_BEGIN + 7);
-			}
-		}
+	protected updateRssiAndThreshold(deviceId, rssi, threshold) {
+		this.states[deviceId].Rssi = rssi;
+		this.states[deviceId].Threshold = threshold;
+	}
 
-		switch (data.readUInt8(Messages.BUFFER_INDEX_MSG_TYPE)) {
-			case Constants.MESSAGE_CHANNEL_BROADCAST_DATA:
-			case Constants.MESSAGE_CHANNEL_ACKNOWLEDGED_DATA:
-			case Constants.MESSAGE_CHANNEL_BURST_DATA:
-				updateState(this, this.states[deviceId], data);
-				break;
-			default:
-				break;
-		}
+	protected updateState(deviceId, data) {
+		updateState(this, this.states[deviceId], data);
 	}
 }
 

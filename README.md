@@ -173,7 +173,7 @@ Fired when new heartbeat data is received.
 
 #### setWheelCircumference(circumferenceInMeters)
 
-Calibrates the speed sensor. Defaults to an ~ 700c wheel, 2.118
+Calibrates the speed sensor. Defaults to a wheel with diameter of 70cm (= 2.199)
 
 #### events
 

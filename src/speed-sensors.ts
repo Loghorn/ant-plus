@@ -3,10 +3,7 @@
  * Spec sheet: https://www.thisisant.com/resources/bicycle-speed-and-cadence/
  */
 
-import Ant = require('./ant');
-
-const Messages = Ant.Messages;
-const Constants = Ant.Constants;
+import { AntPlusSensor, AntPlusScanner, Messages } from './ant';
 
 class SpeedSensorState {
 	constructor(deviceID: number) {
@@ -35,17 +32,13 @@ class SpeedScanState extends SpeedSensorState {
 	Threshold: number;
 }
 
-export class SpeedSensor extends Ant.AntPlusSensor {
-	constructor(stick) {
-		super(stick);
-		this.decodeDataCbk = this.decodeData.bind(this);
-	}
+export class SpeedSensor extends AntPlusSensor {
 
 	static deviceType = 0x7B;
 
-	wheelCircumference: number = 2.118; //This is my 700c wheel, just using as default
+	wheelCircumference: number = 2.199; // default 70cm wheel
 
-	setWheelCircumference(wheelCircumference: number) {
+	public setWheelCircumference(wheelCircumference: number) {
 		this.wheelCircumference = wheelCircumference;
 	}
 
@@ -56,86 +49,38 @@ export class SpeedSensor extends Ant.AntPlusSensor {
 
 	private state: SpeedSensorState;
 
-	decodeData(data: Buffer) {
-		if (data.readUInt8(Messages.BUFFER_INDEX_CHANNEL_NUM) !== this.channel) {
-			return;
-		}
-
-		switch (data.readUInt8(Messages.BUFFER_INDEX_MSG_TYPE)) {
-			case Constants.MESSAGE_CHANNEL_BROADCAST_DATA:
-			case Constants.MESSAGE_CHANNEL_ACKNOWLEDGED_DATA:
-			case Constants.MESSAGE_CHANNEL_BURST_DATA:
-				if (this.deviceID === 0) {
-					this.write(Messages.requestMessage(this.channel, Constants.MESSAGE_CHANNEL_ID));
-				}
-
-				updateState(this, this.state, data);
-				break;
-			case Constants.MESSAGE_CHANNEL_ID:
-				this.deviceID = data.readUInt16LE(Messages.BUFFER_INDEX_MSG_DATA);
-				this.transmissionType = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 3);
-				this.state.DeviceID = this.deviceID;
-				break;
-			default:
-				break;
-		}
+	protected updateState(deviceId, data) {
+		this.state.DeviceID = deviceId;
+		updateState(this, this.state, data);
 	}
-
 }
 
-export class SpeedScanner extends Ant.AntPlusScanner {
-	constructor(stick) {
-		super(stick);
-		this.decodeDataCbk = this.decodeData.bind(this);
+export class SpeedScanner extends AntPlusScanner {
+	protected deviceType() {
+		return SpeedSensor.deviceType;
 	}
 
-	static deviceType = 0x7B;
+	wheelCircumference: number = 2.199; // default 70cm wheel
 
-	wheelCircumference: number = 2.118; //This is my 700c wheel, just using as default
-
-	setWheelCircumference(wheelCircumference: number) {
+	public setWheelCircumference(wheelCircumference: number) {
 		this.wheelCircumference = wheelCircumference;
-	}
-
-	public scan() {
-		super.scan('receive');
 	}
 
 	private states: { [id: number]: SpeedScanState } = {};
 
-	decodeData(data: Buffer) {
-		if (data.length <= (Messages.BUFFER_INDEX_EXT_MSG_BEGIN + 3) || !(data.readUInt8(Messages.BUFFER_INDEX_EXT_MSG_BEGIN) & 0x80)) {
-			console.log('wrong message format');
-			return;
-		}
-
-		const deviceId = data.readUInt16LE(Messages.BUFFER_INDEX_EXT_MSG_BEGIN + 1);
-		const deviceType = data.readUInt8(Messages.BUFFER_INDEX_EXT_MSG_BEGIN + 3);
-
-		if (deviceType !== SpeedScanner.deviceType) {
-			return;
-		}
-
+	protected createStateIfNew(deviceId) {
 		if (!this.states[deviceId]) {
 			this.states[deviceId] = new SpeedScanState(deviceId);
 		}
+	}
 
-		if (data.readUInt8(Messages.BUFFER_INDEX_EXT_MSG_BEGIN) & 0x40) {
-			if (data.readUInt8(Messages.BUFFER_INDEX_EXT_MSG_BEGIN + 5) === 0x20) {
-				this.states[deviceId].Rssi = data.readInt8(Messages.BUFFER_INDEX_EXT_MSG_BEGIN + 6);
-				this.states[deviceId].Threshold = data.readInt8(Messages.BUFFER_INDEX_EXT_MSG_BEGIN + 7);
-			}
-		}
+	protected updateRssiAndThreshold(deviceId, rssi, threshold) {
+		this.states[deviceId].Rssi = rssi;
+		this.states[deviceId].Threshold = threshold;
+	}
 
-		switch (data.readUInt8(Messages.BUFFER_INDEX_MSG_TYPE)) {
-			case Constants.MESSAGE_CHANNEL_BROADCAST_DATA:
-			case Constants.MESSAGE_CHANNEL_ACKNOWLEDGED_DATA:
-			case Constants.MESSAGE_CHANNEL_BURST_DATA:
-				updateState(this, this.states[deviceId], data);
-				break;
-			default:
-				break;
-		}
+	protected updateState(deviceId, data) {
+		updateState(this, this.states[deviceId], data);
 	}
 }
 

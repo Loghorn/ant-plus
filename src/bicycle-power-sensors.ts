@@ -1,12 +1,9 @@
 /*
- * ANT+ profile: https://www.thisisant.com/developer/ant-plus/device-profiles/#521_tab
- * Spec sheet: https://www.thisisant.com/resources/bicycle-power/
- */
+* ANT+ profile: https://www.thisisant.com/developer/ant-plus/device-profiles/#521_tab
+* Spec sheet: https://www.thisisant.com/resources/bicycle-power/
+*/
 
-import Ant = require('./ant');
-
-const Constants = Ant.Constants;
-const Messages = Ant.Messages;
+import { AntPlusSensor, AntPlusScanner, Messages } from './ant';
 
 class BicyclePowerSensorState {
 	constructor(deviceID: number) {
@@ -35,12 +32,7 @@ class BicyclePowerScanState extends BicyclePowerSensorState {
 	Threshold: number;
 }
 
-export class BicyclePowerSensor extends Ant.AntPlusSensor {
-	constructor(stick) {
-		super(stick);
-		this.decodeDataCbk = this.decodeData.bind(this);
-	}
-
+export class BicyclePowerSensor extends AntPlusSensor {
 	static deviceType = 0x0B;
 
 	public attach(channel, deviceID): void {
@@ -50,81 +42,32 @@ export class BicyclePowerSensor extends Ant.AntPlusSensor {
 
 	private state: BicyclePowerSensorState;
 
-	decodeData(data: Buffer) {
-		if (data.readUInt8(Messages.BUFFER_INDEX_CHANNEL_NUM) !== this.channel) {
-			return;
-		}
-
-		switch (data.readUInt8(Messages.BUFFER_INDEX_MSG_TYPE)) {
-			case Constants.MESSAGE_CHANNEL_BROADCAST_DATA:
-			case Constants.MESSAGE_CHANNEL_ACKNOWLEDGED_DATA:
-			case Constants.MESSAGE_CHANNEL_BURST_DATA:
-				if (this.deviceID === 0) {
-					this.write(Messages.requestMessage(this.channel, Constants.MESSAGE_CHANNEL_ID));
-				}
-
-				updateState(this, this.state, data);
-				break;
-
-			case Constants.MESSAGE_CHANNEL_ID:
-				this.deviceID = data.readUInt16LE(Messages.BUFFER_INDEX_MSG_DATA);
-				this.transmissionType = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 3);
-				this.state.DeviceID = this.deviceID;
-				break;
-			default:
-				break;
-		}
+	protected updateState(deviceId, data) {
+		this.state.DeviceID = deviceId;
+		updateState(this, this.state, data);
 	}
-
 }
 
-export class BicyclePowerScanner extends Ant.AntPlusScanner {
-	constructor(stick) {
-		super(stick);
-		this.decodeDataCbk = this.decodeData.bind(this);
-	}
-
-	static deviceType = 0x0B;
-
-	public scan() {
-		super.scan('receive');
+export class BicyclePowerScanner extends AntPlusScanner {
+	protected deviceType() {
+		return BicyclePowerSensor.deviceType;
 	}
 
 	private states: { [id: number]: BicyclePowerScanState } = {};
 
-	decodeData(data: Buffer) {
-		if (data.length <= Messages.BUFFER_INDEX_EXT_MSG_BEGIN || !(data.readUInt8(Messages.BUFFER_INDEX_EXT_MSG_BEGIN) & 0x80)) {
-			console.log('wrong message format');
-			return;
-		}
-
-		const deviceId = data.readUInt16LE(Messages.BUFFER_INDEX_EXT_MSG_BEGIN + 1);
-		const deviceType = data.readUInt8(Messages.BUFFER_INDEX_EXT_MSG_BEGIN + 3);
-
-		if (deviceType !== BicyclePowerScanner.deviceType) {
-			return;
-		}
-
+	protected createStateIfNew(deviceId) {
 		if (!this.states[deviceId]) {
 			this.states[deviceId] = new BicyclePowerScanState(deviceId);
 		}
+	}
 
-		if (data.readUInt8(Messages.BUFFER_INDEX_EXT_MSG_BEGIN) & 0x40) {
-			if (data.readUInt8(Messages.BUFFER_INDEX_EXT_MSG_BEGIN + 5) === 0x20) {
-				this.states[deviceId].Rssi = data.readInt8(Messages.BUFFER_INDEX_EXT_MSG_BEGIN + 6);
-				this.states[deviceId].Threshold = data.readInt8(Messages.BUFFER_INDEX_EXT_MSG_BEGIN + 7);
-			}
-		}
+	protected updateRssiAndThreshold(deviceId, rssi, threshold) {
+		this.states[deviceId].Rssi = rssi;
+		this.states[deviceId].Threshold = threshold;
+	}
 
-		switch (data.readUInt8(Messages.BUFFER_INDEX_MSG_TYPE)) {
-			case Constants.MESSAGE_CHANNEL_BROADCAST_DATA:
-			case Constants.MESSAGE_CHANNEL_ACKNOWLEDGED_DATA:
-			case Constants.MESSAGE_CHANNEL_BURST_DATA:
-				updateState(this, this.states[deviceId], data);
-				break;
-			default:
-				break;
-		}
+	protected updateState(deviceId, data) {
+		updateState(this, this.states[deviceId], data);
 	}
 }
 
