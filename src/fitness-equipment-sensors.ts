@@ -3,22 +3,22 @@
  * Spec sheet: https://www.thisisant.com/resources/bicycle-power/
  */
 
-import Ant = require('./ant');
-
-const Constants = Ant.Constants;
-const Messages = Ant.Messages;
+import { Messages, SendCallback, AntPlusSensor, AntPlusScanner } from './ant';
 
 class FitnessEquipmentSensorState {
 	constructor(deviceID: number) {
 		this.DeviceID = deviceID;
 	}
 
+	_EventCount0x19?: number;
+	_EventCount0x1A?: number;
+
 	DeviceID: number;
 	Temperature?: number;
 	ZeroOffset?: number;
 	SpinDownTime?: number;
 
-	EquipmentType?: 'Treadmill' | 'Elliptical' | 'StationaryBike' | 'Rower' | 'Climber' | 'NordicSkier' | 'Trainer' | 'General';
+	EquipmentType?: 'Treadmill' | 'Elliptical' | 'Reserved' | 'Rower' | 'Climber' | 'NordicSkier' | 'Trainer/StationaryBike' | 'General';
 	ElapsedTime?: number;
 	Distance?: number;
 	RealSpeed?: number;
@@ -35,13 +35,22 @@ class FitnessEquipmentSensorState {
 	CaloricBurnRate?: number;
 	Calories?: number;
 
-	_EventCount0x19?: number;
+	AscendedDistance?: number;
+	DescendedDistance?: number;
+
+	Strides?: number;
+	Strokes?: number;
+
 	Cadence?: number;
 	AccumulatedPower?: number;
 	InstantaneousPower?: number;
 	AveragePower?: number;
 	TrainerStatus?: number;
 	TargetStatus?: 'OnTarget' | 'LowSpeed' | 'HighSpeed';
+
+	WheelTicks?: number;
+	WheelPeriod?: number;
+	Torque?: number;
 
 	HwVersion?: number;
 	ManId?: number;
@@ -58,12 +67,7 @@ class FitnessEquipmentScanState extends FitnessEquipmentSensorState {
 	Threshold: number;
 }
 
-export class FitnessEquipmentSensor extends Ant.AntPlusSensor {
-	constructor(stick) {
-		super(stick);
-		this.decodeDataCbk = this.decodeData.bind(this);
-	}
-
+export class FitnessEquipmentSensor extends AntPlusSensor {
 	static deviceType = 0x11;
 
 	public attach(channel, deviceID): void {
@@ -73,81 +77,125 @@ export class FitnessEquipmentSensor extends Ant.AntPlusSensor {
 
 	private state: FitnessEquipmentSensorState;
 
-	decodeData(data: Buffer) {
-		if (data.readUInt8(Messages.BUFFER_INDEX_CHANNEL_NUM) !== this.channel) {
-			return;
-		}
+	protected updateState(deviceId, data) {
+		this.state.DeviceID = deviceId;
+		updateState(this, this.state, data);
+	}
 
-		switch (data.readUInt8(Messages.BUFFER_INDEX_MSG_TYPE)) {
-			case Constants.MESSAGE_CHANNEL_BROADCAST_DATA:
-			case Constants.MESSAGE_CHANNEL_ACKNOWLEDGED_DATA:
-			case Constants.MESSAGE_CHANNEL_BURST_DATA:
-				if (this.deviceID === 0) {
-					this.write(Messages.requestMessage(this.channel, Constants.MESSAGE_CHANNEL_ID));
-				}
+	private _setUserConfiguration(userWeight?: number, bikeWeight?: number, wheelDiameter?: number, gearRatio?: number,
+		cbk?: SendCallback) {
+		const m = userWeight === undefined ? 0xFFFF : Math.max(0, Math.min(65534, Math.round(userWeight * 100)));
+		const df = wheelDiameter === undefined ? 0xFF : Math.round(wheelDiameter * 10) % 10;
+		const mb = bikeWeight === undefined ? 0xFFF : Math.max(0, Math.min(1000, Math.round(bikeWeight * 20)));
+		const d = wheelDiameter === undefined ? 0xFF : Math.max(0, Math.min(254, Math.round(wheelDiameter)));
+		const gr = gearRatio === undefined ? 0x00 : Math.max(1, Math.min(255, Math.round(gearRatio / .03)));
+		const payload = [0x37, m & 0xFF, (m >> 8) & 0xFF, 0xFF, (df & 0xF) | ((mb & 0xF) << 4), (mb >> 4) & 0xF, d & 0xFF, gr & 0xFF];
+		const msg = Messages.acknowledgedData(this.channel, payload);
+		this.send(msg, cbk);
+	}
 
-				updateState(this, this.state, data);
-				break;
-
-			case Constants.MESSAGE_CHANNEL_ID:
-				this.deviceID = data.readUInt16LE(Messages.BUFFER_INDEX_MSG_DATA);
-				this.transmissionType = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 3);
-				this.state.DeviceID = this.deviceID;
-				break;
-			default:
-				break;
+	public setUserConfiguration(cbk: SendCallback);
+	public setUserConfiguration(userWeight: number, cbk?: SendCallback);
+	public setUserConfiguration(userWeight: number, bikeWeight: number, cbk?: SendCallback);
+	public setUserConfiguration(userWeight: number, bikeWeight: number, wheelDiameter: number, cbk?: SendCallback);
+	public setUserConfiguration(userWeight: number, bikeWeight: number, wheelDiameter: number, gearRatio: number, cbk?: SendCallback);
+	public setUserConfiguration(userWeight?: number | SendCallback, bikeWeight?: number | SendCallback, wheelDiameter?: number | SendCallback,
+		gearRatio?: number | SendCallback, cbk?: SendCallback) {
+		if (typeof (userWeight) === 'function') {
+			return this._setUserConfiguration(undefined, undefined, undefined, undefined, userWeight);
+		} else if (typeof (bikeWeight) === 'function') {
+			return this._setUserConfiguration(userWeight, undefined, undefined, undefined, bikeWeight);
+		} else if (typeof (wheelDiameter) === 'function') {
+			return this._setUserConfiguration(userWeight, bikeWeight, undefined, undefined, wheelDiameter);
+		} else if (typeof (gearRatio) === 'function') {
+			return this._setUserConfiguration(userWeight, bikeWeight, wheelDiameter, undefined, gearRatio);
+		} else {
+			return this._setUserConfiguration(userWeight, bikeWeight, wheelDiameter, gearRatio, cbk);
 		}
 	}
 
+	public setBasicResistance(resistance: number, cbk?: SendCallback) {
+		const res = Math.max(0, Math.min(200, Math.round(resistance * 2)));
+		const payload = [0x30, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, res & 0xFF];
+		const msg = Messages.acknowledgedData(this.channel, payload);
+		this.send(msg, cbk);
+	}
+
+	public setTargetPower(power: number, cbk?: SendCallback) {
+		const p = Math.max(0, Math.min(4000, Math.round(power * 4)));
+		const payload = [0x31, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, p & 0xFF, (p >> 8) & 0xFF];
+		const msg = Messages.acknowledgedData(this.channel, payload);
+		this.send(msg, cbk);
+	}
+
+	private _setWindResistance(windCoeff?: number, windSpeed?: number, draftFactor?: number, cbk?: SendCallback) {
+		const wc = windCoeff === undefined ? 0xFF : Math.max(0, Math.min(186, Math.round(windCoeff * 100)));
+		const ws = windSpeed === undefined ? 0xFF : Math.max(0, Math.min(254, Math.round(windSpeed + 127)));
+		const df = draftFactor === undefined ? 0xFF : Math.max(0, Math.min(100, Math.round(draftFactor * 100)));
+		const payload = [0x32, 0xFF, 0xFF, 0xFF, 0xFF, wc & 0xFF, ws & 0xFF, df & 0xFF];
+		const msg = Messages.acknowledgedData(this.channel, payload);
+		this.send(msg, cbk);
+	}
+
+	public setWindResistance(cbk: SendCallback);
+	public setWindResistance(windCoeff: number, cbk?: SendCallback);
+	public setWindResistance(windCoeff: number, windSpeed: number, cbk?: SendCallback);
+	public setWindResistance(windCoeff: number, windSpeed: number, draftFactor: number, cbk?: SendCallback);
+	public setWindResistance(windCoeff?: number | SendCallback, windSpeed?: number | SendCallback, draftFactor?: number | SendCallback,
+		cbk?: SendCallback) {
+		if (typeof (windCoeff) === 'function') {
+			return this._setWindResistance(undefined, undefined, undefined, windCoeff);
+		} else if (typeof (windSpeed) === 'function') {
+			return this._setWindResistance(windCoeff, undefined, undefined, windSpeed);
+		} else if (typeof (draftFactor) === 'function') {
+			return this._setWindResistance(windCoeff, windSpeed, undefined, draftFactor);
+		} else {
+			return this._setWindResistance(windCoeff, windSpeed, draftFactor, cbk);
+		}
+	}
+
+	private _setTrackResistance(slope?: number, rollingResistanceCoeff?: number, cbk?: SendCallback) {
+		const s = slope === undefined ? 0xFFFF : Math.max(0, Math.min(40000, Math.round((slope + 200) * 100)));
+		const rr = rollingResistanceCoeff === undefined ? 0xFF : Math.max(0, Math.min(254, Math.round(rollingResistanceCoeff * 20000)));
+		const payload = [0x33, 0xFF, 0xFF, 0xFF, 0xFF, s & 0xFF, (s >> 8) & 0xFF, rr & 0xFF];
+		const msg = Messages.acknowledgedData(this.channel, payload);
+		this.send(msg, cbk);
+	}
+
+	public setTrackResistance(cbk: SendCallback);
+	public setTrackResistance(slope: number, cbk?: SendCallback);
+	public setTrackResistance(slope: number, rollingResistanceCoeff: number, cbk?: SendCallback);
+	public setTrackResistance(slope?: number | SendCallback, rollingResistanceCoeff?: number | SendCallback, cbk?: SendCallback) {
+		if (typeof (slope) === 'function') {
+			return this._setTrackResistance(undefined, undefined, slope);
+		} else if (typeof (rollingResistanceCoeff) === 'function') {
+			return this._setTrackResistance(slope, undefined, rollingResistanceCoeff);
+		} else {
+			return this._setTrackResistance(slope, rollingResistanceCoeff, cbk);
+		}
+	}
 }
 
-export class FitnessEquipmentScanner extends Ant.AntPlusScanner {
-	constructor(stick) {
-		super(stick);
-		this.decodeDataCbk = this.decodeData.bind(this);
-	}
-
-	static deviceType = 0x11;
-
-	public scan() {
-		super.scan('receive');
+export class FitnessEquipmentScanner extends AntPlusScanner {
+	protected deviceType() {
+		return FitnessEquipmentSensor.deviceType;
 	}
 
 	private states: { [id: number]: FitnessEquipmentScanState } = {};
 
-	decodeData(data: Buffer) {
-		if (data.length <= Messages.BUFFER_INDEX_EXT_MSG_BEGIN || !(data.readUInt8(Messages.BUFFER_INDEX_EXT_MSG_BEGIN) & 0x80)) {
-			console.log('wrong message format');
-			return;
-		}
-
-		const deviceId = data.readUInt16LE(Messages.BUFFER_INDEX_EXT_MSG_BEGIN + 1);
-		const deviceType = data.readUInt8(Messages.BUFFER_INDEX_EXT_MSG_BEGIN + 3);
-
-		if (deviceType !== FitnessEquipmentScanner.deviceType) {
-			return;
-		}
-
+	protected createStateIfNew(deviceId) {
 		if (!this.states[deviceId]) {
 			this.states[deviceId] = new FitnessEquipmentScanState(deviceId);
 		}
+	}
 
-		if (data.readUInt8(Messages.BUFFER_INDEX_EXT_MSG_BEGIN) & 0x40) {
-			if (data.readUInt8(Messages.BUFFER_INDEX_EXT_MSG_BEGIN + 5) === 0x20) {
-				this.states[deviceId].Rssi = data.readInt8(Messages.BUFFER_INDEX_EXT_MSG_BEGIN + 6);
-				this.states[deviceId].Threshold = data.readInt8(Messages.BUFFER_INDEX_EXT_MSG_BEGIN + 7);
-			}
-		}
+	protected updateRssiAndThreshold(deviceId, rssi, threshold) {
+		this.states[deviceId].Rssi = rssi;
+		this.states[deviceId].Threshold = threshold;
+	}
 
-		switch (data.readUInt8(Messages.BUFFER_INDEX_MSG_TYPE)) {
-			case Constants.MESSAGE_CHANNEL_BROADCAST_DATA:
-			case Constants.MESSAGE_CHANNEL_ACKNOWLEDGED_DATA:
-			case Constants.MESSAGE_CHANNEL_BURST_DATA:
-				updateState(this, this.states[deviceId], data);
-				break;
-			default:
-				break;
-		}
+	protected updateState(deviceId, data) {
+		updateState(this, this.states[deviceId], data);
 	}
 }
 
@@ -165,12 +213,20 @@ function resetState(state: FitnessEquipmentSensorState | FitnessEquipmentScanSta
 	delete state.CaloricBurnRate;
 	delete state.Calories;
 	delete state._EventCount0x19;
+	delete state._EventCount0x1A;
 	delete state.Cadence;
 	delete state.AccumulatedPower;
 	delete state.InstantaneousPower;
 	delete state.AveragePower;
 	delete state.TrainerStatus;
 	delete state.TargetStatus;
+	delete state.AscendedDistance;
+	delete state.DescendedDistance;
+	delete state.Strides;
+	delete state.Strokes;
+	delete state.WheelTicks;
+	delete state.WheelPeriod;
+	delete state.Torque;
 }
 
 function updateState(
@@ -199,11 +255,11 @@ function updateState(
 			switch (equipmentTypeBF & 0x1F) {
 				case 19: state.EquipmentType = 'Treadmill'; break;
 				case 20: state.EquipmentType = 'Elliptical'; break;
-				case 21: state.EquipmentType = 'StationaryBike'; break;
+				case 21: state.EquipmentType = 'Reserved'; break;
 				case 22: state.EquipmentType = 'Rower'; break;
 				case 23: state.EquipmentType = 'Climber'; break;
 				case 24: state.EquipmentType = 'NordicSkier'; break;
-				case 25: state.EquipmentType = 'Trainer'; break;
+				case 25: state.EquipmentType = 'Trainer/StationaryBike'; break;
 				default: state.EquipmentType = 'General'; break;
 			}
 			let elapsedTime = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 2);
@@ -327,6 +383,208 @@ function updateState(
 			}
 			break;
 		}
+		case 0x13: {
+			const cadence = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 4);
+			let negDistance = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 5);
+			let posDistance = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 6);
+			const flagStateBF = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 7);
+
+			if (cadence !== 0xFF) {
+				state.Cadence = cadence;
+			}
+
+			if (flagStateBF & 0x02) {
+				const oldNegDistance = (state.DescendedDistance || 0) % 256;
+				if (negDistance !== oldNegDistance) {
+					if (oldNegDistance > negDistance) {
+						negDistance += 256;
+					}
+				}
+				state.DescendedDistance = (state.DescendedDistance || 0) + negDistance - oldNegDistance;
+			}
+
+			if (flagStateBF & 0x01) {
+				const oldPosDistance = (state.AscendedDistance || 0) % 256;
+				if (posDistance !== oldPosDistance) {
+					if (oldPosDistance > posDistance) {
+						posDistance += 256;
+					}
+				}
+				state.AscendedDistance = (state.AscendedDistance || 0) + posDistance - oldPosDistance;
+			}
+
+			switch ((flagStateBF & 0x70) >> 4) {
+				case 1: state.State = 'OFF'; break;
+				case 2: state.State = 'READY'; resetState(state); break;
+				case 3: state.State = 'IN_USE'; break;
+				case 4: state.State = 'FINISHED'; break;
+				default: delete state.State; break;
+			}
+			if (flagStateBF & 0x80) {
+				// lap
+			}
+
+			break;
+		}
+		case 0x14: {
+			let posDistance = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 2);
+			let strides = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 3);
+			const cadence = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 4);
+			const power = data.readUInt16LE(Messages.BUFFER_INDEX_MSG_DATA + 5);
+			const flagStateBF = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 7);
+
+			if (cadence !== 0xFF) {
+				state.Cadence = cadence;
+			}
+
+			if (power !== 0xFFFF) {
+				state.InstantaneousPower = power;
+			}
+
+			if (flagStateBF & 0x02) {
+				const oldPosDistance = (state.AscendedDistance || 0) % 256;
+				if (posDistance !== oldPosDistance) {
+					if (oldPosDistance > posDistance) {
+						posDistance += 256;
+					}
+				}
+				state.AscendedDistance = (state.AscendedDistance || 0) + posDistance - oldPosDistance;
+			}
+
+			if (flagStateBF & 0x01) {
+				const oldStrides = (state.Strides || 0) % 256;
+				if (strides !== oldStrides) {
+					if (oldStrides > strides) {
+						strides += 256;
+					}
+				}
+				state.Strides = (state.Strides || 0) + strides - oldStrides;
+			}
+
+			switch ((flagStateBF & 0x70) >> 4) {
+				case 1: state.State = 'OFF'; break;
+				case 2: state.State = 'READY'; resetState(state); break;
+				case 3: state.State = 'IN_USE'; break;
+				case 4: state.State = 'FINISHED'; break;
+				default: delete state.State; break;
+			}
+			if (flagStateBF & 0x80) {
+				// lap
+			}
+
+			break;
+		}
+		case 0x16: {
+			let strokes = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 3);
+			const cadence = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 4);
+			const power = data.readUInt16LE(Messages.BUFFER_INDEX_MSG_DATA + 5);
+			const flagStateBF = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 7);
+
+			if (cadence !== 0xFF) {
+				state.Cadence = cadence;
+			}
+
+			if (power !== 0xFFFF) {
+				state.InstantaneousPower = power;
+			}
+
+			if (flagStateBF & 0x01) {
+				const oldStrokes = (state.Strokes || 0) % 256;
+				if (strokes !== oldStrokes) {
+					if (oldStrokes > strokes) {
+						strokes += 256;
+					}
+				}
+				state.Strokes = (state.Strokes || 0) + strokes - oldStrokes;
+			}
+
+			switch ((flagStateBF & 0x70) >> 4) {
+				case 1: state.State = 'OFF'; break;
+				case 2: state.State = 'READY'; resetState(state); break;
+				case 3: state.State = 'IN_USE'; break;
+				case 4: state.State = 'FINISHED'; break;
+				default: delete state.State; break;
+			}
+			if (flagStateBF & 0x80) {
+				// lap
+			}
+
+			break;
+		}
+		case 0x17: {
+			let strides = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 3);
+			const cadence = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 4);
+			const power = data.readUInt16LE(Messages.BUFFER_INDEX_MSG_DATA + 5);
+			const flagStateBF = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 7);
+
+			if (cadence !== 0xFF) {
+				state.Cadence = cadence;
+			}
+
+			if (power !== 0xFFFF) {
+				state.InstantaneousPower = power;
+			}
+
+			if (flagStateBF & 0x01) {
+				const oldStrides = (state.Strides || 0) % 256;
+				if (strides !== oldStrides) {
+					if (oldStrides > strides) {
+						strides += 256;
+					}
+				}
+				state.Strides = (state.Strides || 0) + strides - oldStrides;
+			}
+
+			switch ((flagStateBF & 0x70) >> 4) {
+				case 1: state.State = 'OFF'; break;
+				case 2: state.State = 'READY'; resetState(state); break;
+				case 3: state.State = 'IN_USE'; break;
+				case 4: state.State = 'FINISHED'; break;
+				default: delete state.State; break;
+			}
+			if (flagStateBF & 0x80) {
+				// lap
+			}
+
+			break;
+		}
+		case 0x18: {
+			let strides = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 3);
+			const cadence = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 4);
+			const power = data.readUInt16LE(Messages.BUFFER_INDEX_MSG_DATA + 5);
+			const flagStateBF = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 7);
+
+			if (cadence !== 0xFF) {
+				state.Cadence = cadence;
+			}
+
+			if (power !== 0xFFFF) {
+				state.InstantaneousPower = power;
+			}
+
+			if (flagStateBF & 0x01) {
+				const oldStrides = (state.Strides || 0) % 256;
+				if (strides !== oldStrides) {
+					if (oldStrides > strides) {
+						strides += 256;
+					}
+				}
+				state.Strides = (state.Strides || 0) + strides - oldStrides;
+			}
+
+			switch ((flagStateBF & 0x70) >> 4) {
+				case 1: state.State = 'OFF'; break;
+				case 2: state.State = 'READY'; resetState(state); break;
+				case 3: state.State = 'IN_USE'; break;
+				case 4: state.State = 'FINISHED'; break;
+				default: delete state.State; break;
+			}
+			if (flagStateBF & 0x80) {
+				// lap
+			}
+
+			break;
+		}
 		case 0x19: {
 			const oldEventCount = state._EventCount0x19 || 0;
 
@@ -370,6 +628,59 @@ function updateState(
 				case 2: state.TargetStatus = 'HighSpeed'; break;
 				default: delete state.TargetStatus; break;
 			}
+
+			switch ((flagStateBF & 0x70) >> 4) {
+				case 1: state.State = 'OFF'; break;
+				case 2: state.State = 'READY'; resetState(state); break;
+				case 3: state.State = 'IN_USE'; break;
+				case 4: state.State = 'FINISHED'; break;
+				default: delete state.State; break;
+			}
+			if (flagStateBF & 0x80) {
+				// lap
+			}
+
+			break;
+		}
+		case 0x1A: {
+			const oldEventCount = state._EventCount0x1A || 0;
+
+			let eventCount = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 1);
+			let wheelTicks = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 2);
+			let accWheelPeriod = data.readUInt16LE(Messages.BUFFER_INDEX_MSG_DATA + 3);
+			let accTorque = data.readUInt16LE(Messages.BUFFER_INDEX_MSG_DATA + 5);
+			const flagStateBF = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 7);
+
+			if (eventCount !== oldEventCount) {
+				state._EventCount0x1A = eventCount;
+				if (oldEventCount > eventCount) { //Hit rollover value
+					eventCount += 255;
+				}
+			}
+
+			const oldWheelTicks = (state.WheelTicks || 0) % 256;
+			if (wheelTicks !== oldWheelTicks) {
+				if (oldWheelTicks > wheelTicks) {
+					wheelTicks += 65536;
+				}
+			}
+			state.WheelTicks = (state.WheelTicks || 0) + wheelTicks - oldWheelTicks;
+
+			const oldWheelPeriod = (state.WheelPeriod || 0) % 256;
+			if (accWheelPeriod !== oldWheelPeriod) {
+				if (oldWheelPeriod > accWheelPeriod) {
+					accWheelPeriod += 65536;
+				}
+			}
+			state.WheelPeriod = (state.WheelPeriod || 0) + accWheelPeriod - oldWheelPeriod;
+
+			const oldTorque = (state.Torque || 0) % 256;
+			if (accTorque !== oldTorque) {
+				if (oldTorque > accTorque) {
+					accTorque += 65536;
+				}
+			}
+			state.Torque = (state.Torque || 0) + accTorque - oldTorque;
 
 			switch ((flagStateBF & 0x70) >> 4) {
 				case 1: state.State = 'OFF'; break;

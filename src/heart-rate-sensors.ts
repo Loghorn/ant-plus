@@ -3,10 +3,7 @@
  * Spec sheet: https://www.thisisant.com/resources/heart-rate-monitor/
  */
 
-import Ant = require('./ant');
-
-const Constants = Ant.Constants;
-const Messages = Ant.Messages;
+import { AntPlusSensor, AntPlusScanner, Messages } from './ant';
 
 class HeartRateSensorState {
 	constructor(deviceId: number) {
@@ -47,12 +44,7 @@ type Page = {
 	pageState: PageState // sets the state of the receiver - INIT, STD_PAGE, EXT_PAGE
 };
 
-export class HeartRateSensor extends Ant.AntPlusSensor {
-	constructor(stick) {
-		super(stick);
-		this.decodeDataCbk = this.decodeData.bind(this);
-	}
-
+export class HeartRateSensor extends AntPlusSensor {
 	static deviceType = 120;
 
 	public attach(channel, deviceID) {
@@ -67,61 +59,22 @@ export class HeartRateSensor extends Ant.AntPlusSensor {
 		pageState: PageState.INIT_PAGE,
 	};
 
-	decodeData(data: Buffer) {
-		if (data.readUInt8(Messages.BUFFER_INDEX_CHANNEL_NUM) !== this.channel) {
-			return;
-		}
-
-		switch (data.readUInt8(Messages.BUFFER_INDEX_MSG_TYPE)) {
-			case Constants.MESSAGE_CHANNEL_BROADCAST_DATA:
-			case Constants.MESSAGE_CHANNEL_ACKNOWLEDGED_DATA:
-			case Constants.MESSAGE_CHANNEL_BURST_DATA:
-				if (this.deviceID === 0) {
-					this.write(Messages.requestMessage(this.channel, Constants.MESSAGE_CHANNEL_ID));
-				}
-
-				updateState(this, this.state, this.page, data);
-				break;
-			case Constants.MESSAGE_CHANNEL_ID:
-				this.deviceID = data.readUInt16LE(Messages.BUFFER_INDEX_MSG_DATA);
-				this.transmissionType = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 3);
-				this.state.DeviceID = this.deviceID;
-				break;
-			default:
-				break;
-		}
+	protected updateState(deviceId: number, data: Buffer) {
+		this.state.DeviceID = deviceId;
+		updateState(this, this.state, this.page, data);
 	}
 }
 
-export class HeartRateScanner extends Ant.AntPlusScanner {
-	constructor(stick) {
-		super(stick);
-		this.decodeDataCbk = this.decodeData.bind(this);
-	}
-
-	static deviceType = 120;
-
-	public scan() {
-		super.scan('receive');
+export class HeartRateScanner extends AntPlusScanner {
+	protected deviceType() {
+		return HeartRateSensor.deviceType;
 	}
 
 	private states: { [id: number]: HeartRateScannerState } = {};
 
 	private pages: { [id: number]: Page } = {};
 
-	decodeData(data: Buffer) {
-		if (data.length <= (Messages.BUFFER_INDEX_EXT_MSG_BEGIN + 3) || !(data.readUInt8(Messages.BUFFER_INDEX_EXT_MSG_BEGIN) & 0x80)) {
-			console.log('wrong message format');
-			return;
-		}
-
-		const deviceId = data.readUInt16LE(Messages.BUFFER_INDEX_EXT_MSG_BEGIN + 1);
-		const deviceType = data.readUInt8(Messages.BUFFER_INDEX_EXT_MSG_BEGIN + 3);
-
-		if (deviceType !== HeartRateScanner.deviceType) {
-			return;
-		}
-
+	protected createStateIfNew(deviceId) {
 		if (!this.states[deviceId]) {
 			this.states[deviceId] = new HeartRateScannerState(deviceId);
 		}
@@ -129,23 +82,15 @@ export class HeartRateScanner extends Ant.AntPlusScanner {
 		if (!this.pages[deviceId]) {
 			this.pages[deviceId] = { oldPage: -1, pageState: PageState.INIT_PAGE };
 		}
+	}
 
-		if (data.readUInt8(Messages.BUFFER_INDEX_EXT_MSG_BEGIN) & 0x40) {
-			if (data.readUInt8(Messages.BUFFER_INDEX_EXT_MSG_BEGIN + 5) === 0x20) {
-				this.states[deviceId].Rssi = data.readInt8(Messages.BUFFER_INDEX_EXT_MSG_BEGIN + 6);
-				this.states[deviceId].Threshold = data.readInt8(Messages.BUFFER_INDEX_EXT_MSG_BEGIN + 7);
-			}
-		}
+	protected updateRssiAndThreshold(deviceId, rssi, threshold) {
+		this.states[deviceId].Rssi = rssi;
+		this.states[deviceId].Threshold = threshold;
+	}
 
-		switch (data.readUInt8(Messages.BUFFER_INDEX_MSG_TYPE)) {
-			case Constants.MESSAGE_CHANNEL_BROADCAST_DATA:
-			case Constants.MESSAGE_CHANNEL_ACKNOWLEDGED_DATA:
-			case Constants.MESSAGE_CHANNEL_BURST_DATA:
-				updateState(this, this.states[deviceId], this.pages[deviceId], data);
-				break;
-			default:
-				break;
-		}
+	protected updateState(deviceId, data) {
+		updateState(this, this.states[deviceId], this.pages[deviceId], data);
 	}
 }
 

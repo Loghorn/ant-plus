@@ -3,6 +3,8 @@ import events = require('events');
 import usb = require('usb');
 
 export enum Constants {
+	MESSAGE_RF = 0x01,
+
 	MESSAGE_TX_SYNC = 0xA4,
 	DEFAULT_NETWORK_NUMBER = 0x00,
 
@@ -232,6 +234,16 @@ export class Messages {
 		return this.buildMessage(payload, Constants.MESSAGE_CHANNEL_UNASSIGN);
 	}
 
+	static acknowledgedData(channel: number, payload: number[]): Buffer {
+		payload = this.intToLEHexArray(channel).concat(payload);
+		return this.buildMessage(payload, Constants.MESSAGE_CHANNEL_ACKNOWLEDGED_DATA);
+	}
+
+	static broadcastData(channel: number, payload: number[]): Buffer {
+		payload = this.intToLEHexArray(channel).concat(payload);
+		return this.buildMessage(payload, Constants.MESSAGE_CHANNEL_BROADCAST_DATA);
+	}
+
 	static buildMessage(payload: number[] = [], msgID = 0x00): Buffer {
 		const m: number[] = [];
 		m.push(Constants.MESSAGE_TX_SYNC);
@@ -319,11 +331,11 @@ export class USBDriver extends events.EventEmitter {
 			.filter(d => USBDriver.deviceInUse.indexOf(d) === -1);
 	}
 
-	is_present(): boolean {
+	public is_present(): boolean {
 		return this.getDevices().length > 0;
 	}
 
-	open(): boolean {
+	public open(): boolean {
 		const devices = this.getDevices();
 		while (devices.length) {
 			try {
@@ -404,7 +416,7 @@ export class USBDriver extends events.EventEmitter {
 		return true;
 	}
 
-	openAsync(cb: (err: Error) => void): ICancellationToken {
+	public openAsync(cb: (err: Error) => void): ICancellationToken {
 		let ct: CancellationTokenListener;
 		const doOpen = () => {
 			try {
@@ -440,7 +452,7 @@ export class USBDriver extends events.EventEmitter {
 		return ct = new CancellationTokenListener(fn, cb);
 	}
 
-	close() {
+	public close() {
 		this.detach_all();
 		this.inEp.stopPoll(() => {
 			// @ts-ignore
@@ -472,18 +484,18 @@ export class USBDriver extends events.EventEmitter {
 		});
 	}
 
-	reset() {
+	public reset() {
 		this.detach_all();
 		this.maxChannels = 0;
 		this.usedChannels = 0;
 		this.write(Messages.resetSystem());
 	}
 
-	isScanning(): boolean {
+	public isScanning(): boolean {
 		return this.usedChannels === -1;
 	}
 
-	attach(sensor: BaseSensor, forScan: boolean): boolean {
+	public attach(sensor: BaseSensor, forScan: boolean): boolean {
 		if (this.usedChannels < 0) {
 			return false;
 		}
@@ -502,7 +514,7 @@ export class USBDriver extends events.EventEmitter {
 		return true;
 	}
 
-	detach(sensor: BaseSensor): boolean {
+	public detach(sensor: BaseSensor): boolean {
 		const idx = this.attachedSensors.indexOf(sensor);
 		if (idx < 0) {
 			return false;
@@ -516,12 +528,12 @@ export class USBDriver extends events.EventEmitter {
 		return true;
 	}
 
-	detach_all() {
+	public detach_all() {
 		const copy = this.attachedSensors;
 		copy.forEach((sensor: BaseSensor) => sensor.detach());
 	}
 
-	write(data: Buffer) {
+	public write(data: Buffer) {
 		//console.log('DATA SEND: ', data);
 		this.outEp.transfer(data, (error) => {
 			if (error) {
@@ -530,7 +542,7 @@ export class USBDriver extends events.EventEmitter {
 		});
 	}
 
-	read(data: Buffer) {
+	public read(data: Buffer) {
 		//console.log('DATA RECV: ', data);
 		const messageID = data.readUInt8(2);
 		if (messageID === Constants.MESSAGE_STARTUP) {
@@ -559,16 +571,19 @@ export class GarminStick3 extends USBDriver {
 	}
 }
 
-export interface IDecodeDataCallback {
-	(data: Buffer): void;
-}
+export type SendCallback = (result: boolean) => void;
 
-export class BaseSensor extends events.EventEmitter {
+export abstract class BaseSensor extends events.EventEmitter {
 	channel: number;
 	deviceID: number;
 	transmissionType: number;
 
-	protected decodeDataCbk: IDecodeDataCallback;
+	private msgQueue: { msg: Buffer, cbk?: SendCallback }[] = [];
+
+	protected decodeDataCbk: (data: Buffer) => void;
+	protected statusCbk: (status: { msg: number, code: number }) => boolean;
+
+	protected abstract updateState(deviceId: number, data: Buffer): void;
 
 	constructor(private stick: USBDriver) {
 		super();
@@ -588,49 +603,59 @@ export class BaseSensor extends events.EventEmitter {
 
 		const onStatus = (status) => {
 			switch (status.msg) {
-				case 0x01:
+				case Constants.MESSAGE_RF:
 					switch (status.code) {
 						case Constants.EVENT_CHANNEL_CLOSED:
+						case Constants.EVENT_RX_FAIL_GO_TO_SEARCH:
 							this.write(Messages.unassignChannel(channel));
-							break;
+							return true;
+						case Constants.EVENT_TRANSFER_TX_COMPLETED:
+						case Constants.EVENT_TRANSFER_TX_FAILED:
+						case Constants.EVENT_RX_FAIL:
+						case Constants.INVALID_SCAN_TX_CHANNEL:
+							const mc = this.msgQueue.shift();
+							if (mc && mc.cbk) {
+								mc.cbk(status.code === Constants.EVENT_TRANSFER_TX_COMPLETED);
+							}
+							if (this.msgQueue.length) {
+								this.write(this.msgQueue[0].msg);
+							}
+							return true;
 						default:
 							break;
 					}
 					break;
 				case Constants.MESSAGE_CHANNEL_ASSIGN:
 					this.write(Messages.setDevice(channel, 0, 0, 0));
-					break;
+					return true;
 				case Constants.MESSAGE_CHANNEL_ID:
 					this.write(Messages.setFrequency(channel, frequency));
-					break;
+					return true;
 				case Constants.MESSAGE_CHANNEL_FREQUENCY:
 					this.write(Messages.setRxExt());
-					break;
+					return true;
 				case Constants.MESSAGE_ENABLE_RX_EXT:
 					this.write(Messages.libConfig(channel, 0xE0));
-					break;
+					return true;
 				case Constants.MESSAGE_LIB_CONFIG:
 					this.write(Messages.openRxScan());
-					break;
+					return true;
 				case Constants.MESSAGE_CHANNEL_OPEN_RX_SCAN:
-					if (this.decodeDataCbk) {
-						this.stick.on('read', this.decodeDataCbk);
-					}
 					process.nextTick(() => this.emit('attached'));
-					break;
+					return true;
 				case Constants.MESSAGE_CHANNEL_CLOSE:
-					break;
+					return true;
 				case Constants.MESSAGE_CHANNEL_UNASSIGN:
-					this.removeListener('status', onStatus);
+					this.statusCbk = undefined;
 					this.channel = undefined;
-					if (this.decodeDataCbk) {
-						this.stick.removeListener('read', this.decodeDataCbk);
-					}
 					process.nextTick(() => this.emit('detached'));
-					break;
+					return true;
+				case Constants.MESSAGE_CHANNEL_ACKNOWLEDGED_DATA:
+					return (status.code === Constants.TRANSFER_IN_PROGRESS);
 				default:
 					break;
 			}
+			return false;
 		};
 
 		if (this.stick.isScanning()) {
@@ -638,18 +663,15 @@ export class BaseSensor extends events.EventEmitter {
 			this.deviceID = 0;
 			this.transmissionType = 0;
 
-			this.on('status', onStatus);
+			this.statusCbk = onStatus;
 
-			if (this.decodeDataCbk) {
-				this.stick.on('read', this.decodeDataCbk);
-			}
 			process.nextTick(() => this.emit('attached'));
 		} else if (this.stick.attach(this, true)) {
 			this.channel = channel;
 			this.deviceID = 0;
 			this.transmissionType = 0;
 
-			this.on('status', onStatus);
+			this.statusCbk = onStatus;
 
 			this.write(Messages.assignChannel(channel, type));
 		} else {
@@ -671,60 +693,70 @@ export class BaseSensor extends events.EventEmitter {
 
 		const onStatus = (status) => {
 			switch (status.msg) {
-				case 0x01:
+				case Constants.MESSAGE_RF:
 					switch (status.code) {
 						case Constants.EVENT_CHANNEL_CLOSED:
+						case Constants.EVENT_RX_FAIL_GO_TO_SEARCH:
 							this.write(Messages.unassignChannel(channel));
-							break;
+							return true;
+						case Constants.EVENT_TRANSFER_TX_COMPLETED:
+						case Constants.EVENT_TRANSFER_TX_FAILED:
+						case Constants.EVENT_RX_FAIL:
+						case Constants.INVALID_SCAN_TX_CHANNEL:
+							const mc = this.msgQueue.shift();
+							if (mc && mc.cbk) {
+								mc.cbk(status.code === Constants.EVENT_TRANSFER_TX_COMPLETED);
+							}
+							if (this.msgQueue.length) {
+								this.write(this.msgQueue[0].msg);
+							}
+							return true;
 						default:
 							break;
 					}
 					break;
 				case Constants.MESSAGE_CHANNEL_ASSIGN:
 					this.write(Messages.setDevice(channel, deviceID, deviceType, transmissionType));
-					break;
+					return true;
 				case Constants.MESSAGE_CHANNEL_ID:
 					this.write(Messages.searchChannel(channel, timeout));
-					break;
+					return true;
 				case Constants.MESSAGE_CHANNEL_SEARCH_TIMEOUT:
 					this.write(Messages.setFrequency(channel, frequency));
-					break;
+					return true;
 				case Constants.MESSAGE_CHANNEL_FREQUENCY:
 					this.write(Messages.setPeriod(channel, period));
-					break;
+					return true;
 				case Constants.MESSAGE_CHANNEL_PERIOD:
 					this.write(Messages.libConfig(channel, 0xE0));
-					break;
+					return true;
 				case Constants.MESSAGE_LIB_CONFIG:
 					this.write(Messages.openChannel(channel));
-					break;
+					return true;
 				case Constants.MESSAGE_CHANNEL_OPEN:
-					if (this.decodeDataCbk) {
-						this.stick.on('read', this.decodeDataCbk);
-					}
 					process.nextTick(() => this.emit('attached'));
-					break;
+					return true;
 				case Constants.MESSAGE_CHANNEL_CLOSE:
-					break;
+					return true;
 				case Constants.MESSAGE_CHANNEL_UNASSIGN:
-					this.removeListener('status', onStatus);
+					this.statusCbk = undefined;
 					this.channel = undefined;
-					if (this.decodeDataCbk) {
-						this.stick.removeListener('read', this.decodeDataCbk);
-					}
 					process.nextTick(() => this.emit('detached'));
-					break;
+					return true;
+				case Constants.MESSAGE_CHANNEL_ACKNOWLEDGED_DATA:
+					return (status.code === Constants.TRANSFER_IN_PROGRESS);
 				default:
 					break;
 			}
+			return false;
 		};
 
-		this.on('status', onStatus);
+		this.statusCbk = onStatus;
 
 		this.write(Messages.assignChannel(channel, type));
 	}
 
-	detach() {
+	public detach() {
 		if (this.channel === undefined) {
 			return;
 		}
@@ -739,20 +771,39 @@ export class BaseSensor extends events.EventEmitter {
 	}
 
 	private handleEventMessages(data: Buffer) {
-		const messageID = data.readUInt8(2);
+		const messageID = data.readUInt8(Messages.BUFFER_INDEX_MSG_TYPE);
+		const channel = data.readUInt8(Messages.BUFFER_INDEX_CHANNEL_NUM);
 
-		if (messageID === Constants.MESSAGE_CHANNEL_EVENT && data.readUInt8(3) === this.channel) {
-			const status = {
-				msg: data.readUInt8(4),
-				code: data.readUInt8(5),
-			};
+		if (channel === this.channel) {
+			if (messageID === Constants.MESSAGE_CHANNEL_EVENT) {
+				const status = {
+					msg: data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA),
+					code: data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 1),
+				};
 
-			this.emit('status', status);
+				const handled = this.statusCbk && this.statusCbk(status);
+				if (!handled) {
+					console.log('Unhandled event: ' + data.toString('hex'));
+					this.emit('eventData', {
+						message: data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA),
+						code: data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 1),
+					});
+				}
+			} else if (this.decodeDataCbk) {
+				this.decodeDataCbk(data);
+			}
+		}
+	}
+
+	protected send(data: Buffer, cbk?: SendCallback) {
+		this.msgQueue.push({ msg: data, cbk });
+		if (this.msgQueue.length === 1) {
+			this.write(data);
 		}
 	}
 }
 
-export class AntPlusBaseSensor extends BaseSensor {
+export abstract class AntPlusBaseSensor extends BaseSensor {
 
 	protected scan(type: string) {
 		return super.scan(type, 57);
@@ -764,7 +815,12 @@ export class AntPlusBaseSensor extends BaseSensor {
 	}
 }
 
-export class AntPlusSensor extends AntPlusBaseSensor {
+export abstract class AntPlusSensor extends AntPlusBaseSensor {
+
+	constructor(stick) {
+		super(stick);
+		this.decodeDataCbk = this.decodeData.bind(this);
+	}
 
 	protected scan() {
 		throw 'scanning unsupported';
@@ -774,15 +830,82 @@ export class AntPlusSensor extends AntPlusBaseSensor {
 		timeout: number, period: number) {
 		return super.attach(channel, type, deviceID, deviceType, transmissionType, timeout, period);
 	}
+
+	private decodeData(data: Buffer) {
+		switch (data.readUInt8(Messages.BUFFER_INDEX_MSG_TYPE)) {
+			case Constants.MESSAGE_CHANNEL_BROADCAST_DATA:
+			case Constants.MESSAGE_CHANNEL_ACKNOWLEDGED_DATA:
+			case Constants.MESSAGE_CHANNEL_BURST_DATA:
+				if (this.deviceID === 0) {
+					this.write(Messages.requestMessage(this.channel, Constants.MESSAGE_CHANNEL_ID));
+				}
+				this.updateState(this.deviceID, data);
+				break;
+			case Constants.MESSAGE_CHANNEL_ID:
+				this.deviceID = data.readUInt16LE(Messages.BUFFER_INDEX_MSG_DATA);
+				this.transmissionType = data.readUInt8(Messages.BUFFER_INDEX_MSG_DATA + 3);
+				break;
+			default:
+				break;
+		}
+	}
 }
 
-export class AntPlusScanner extends AntPlusBaseSensor {
+export abstract class AntPlusScanner extends AntPlusBaseSensor {
 
-	protected scan(type: string) {
-		return super.scan(type);
+	protected abstract deviceType(): number;
+	protected abstract createStateIfNew(deviceId: number): void;
+	protected abstract updateRssiAndThreshold(deviceId: number, rssi: number, threshold: number): void;
+
+	constructor(stick) {
+		super(stick);
+		this.decodeDataCbk = this.decodeData.bind(this);
+	}
+
+	public scan() {
+		return super.scan('receive');
 	}
 
 	protected attach() {
 		throw 'attach unsupported';
+	}
+
+	protected send() {
+		throw 'send unsupported';
+	}
+
+	private decodeData(data: Buffer) {
+		if (data.length <= (Messages.BUFFER_INDEX_EXT_MSG_BEGIN + 3) || !(data.readUInt8(Messages.BUFFER_INDEX_EXT_MSG_BEGIN) & 0x80)) {
+			console.log('wrong message format', data.toString('hex'));
+			return;
+		}
+
+		const deviceId = data.readUInt16LE(Messages.BUFFER_INDEX_EXT_MSG_BEGIN + 1);
+		const deviceType = data.readUInt8(Messages.BUFFER_INDEX_EXT_MSG_BEGIN + 3);
+
+		if (deviceType !== this.deviceType()) {
+			return;
+		}
+
+		this.createStateIfNew(deviceId);
+
+		if (data.readUInt8(Messages.BUFFER_INDEX_EXT_MSG_BEGIN) & 0x40) {
+			if (data.readUInt8(Messages.BUFFER_INDEX_EXT_MSG_BEGIN + 5) === 0x20) {
+				this.updateRssiAndThreshold(
+					deviceId,
+					data.readInt8(Messages.BUFFER_INDEX_EXT_MSG_BEGIN + 6),
+					data.readInt8(Messages.BUFFER_INDEX_EXT_MSG_BEGIN + 7));
+			}
+		}
+
+		switch (data.readUInt8(Messages.BUFFER_INDEX_MSG_TYPE)) {
+			case Constants.MESSAGE_CHANNEL_BROADCAST_DATA:
+			case Constants.MESSAGE_CHANNEL_ACKNOWLEDGED_DATA:
+			case Constants.MESSAGE_CHANNEL_BURST_DATA:
+				this.updateState(deviceId, data);
+				break;
+			default:
+				break;
+		}
 	}
 }
