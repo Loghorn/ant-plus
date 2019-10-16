@@ -6,6 +6,7 @@ const S = require('./build/speed-sensors');
 const C = require('./build/cadence-sensors');
 const BP = require('./build/bicycle-power-sensors');
 const FE = require('./build/fitness-equipment-sensors');
+const MO = require('./build/muscle-oxygen-sensors');
 
 module.exports = {
 	GarminStick2: Ant.GarminStick2,
@@ -23,5 +24,7 @@ module.exports = {
 	BicyclePowerSensor: BP.BicyclePowerSensor,
 	BicyclePowerScanner: BP.BicyclePowerScanner,
 	FitnessEquipmentSensor: FE.FitnessEquipmentSensor,
-	FitnessEquipmentScanner: FE.FitnessEquipmentScanner
+	FitnessEquipmentScanner: FE.FitnessEquipmentScanner,
+	MuscleOxygenSensor: MO.MuscleOxygenSensor,
+	MuscleOxygenScanner: MO.MuscleOxygenScanner,
 };
