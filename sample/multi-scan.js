@@ -13,6 +13,13 @@ hrScanner.on('attached', () => {
 	speedScanner.scan();
 	cadenceScanner.scan();
 	fitnessEquipmentScanner.scan();
+	environmentScanner.scan();
+});
+
+const environmentScanner = new Ant.EnvironmentScanner(stick);
+environmentScanner.on('envData', data => {
+	console.log(`id: ${data.DeviceID}`);
+	console.dir(data);
 });
 
 const fitnessEquipmentScanner = new Ant.FitnessEquipmentScanner(stick);
