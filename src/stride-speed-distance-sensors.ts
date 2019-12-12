@@ -30,8 +30,6 @@ class StrideSpeedDistanceScanState extends StrideSpeedDistanceSensorState {
 	Threshold: number;
 }
 
-enum PageState { INIT_PAGE, STD_PAGE, EXT_PAGE }
-
 export class StrideSpeedDistanceSensor extends AntPlusSensor {
 	static deviceType = 124;
 
