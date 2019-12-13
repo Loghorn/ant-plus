@@ -10,6 +10,14 @@ Libusb is included as a submodule. On Linux, you'll need libudev to build libusb
 
 Use [Zadig](http://sourceforge.net/projects/libwdi/files/zadig/) to install the WinUSB driver for your USB device. Otherwise you will get `LIBUSB_ERROR_NOT_SUPPORTED` when attempting to open devices.
 
+### macOS
+
+On macOS (tested on High Sierra and Mojave), installing `ant-plus` will also
+install the required `libusb`.
+
+Make sure that Garmin Express is not running,
+because it will attach to the ANT+ stick and prevent `ant-plus` from doing so.
+
 ## Install
 
 ```sh
@@ -79,6 +87,12 @@ if (!stick.open()) {
 ## Objects
 
 ### GarminStick2 and GarminStick3
+
+GarminStick2 is the driver for ANT+ sticks with a USB product ID of `0x1008`.
+As well as the old Garmin USB2 ANT+ stick, this works with many of the common off-brand clones.
+
+GarminStick3 is the driver for the mini Garmin ANT+ stick
+which has a USB product ID of `0x1009`.
 
 #### properties
 
