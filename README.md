@@ -10,6 +10,14 @@ Libusb is included as a submodule. On Linux, you'll need libudev to build libusb
 
 Use [Zadig](http://sourceforge.net/projects/libwdi/files/zadig/) to install the WinUSB driver for your USB device. Otherwise you will get `LIBUSB_ERROR_NOT_SUPPORTED` when attempting to open devices.
 
+### macOS
+
+On macOS (tested on High Sierra and Mojave), installing `ant-plus` will also
+install the required `libusb`.
+
+Make sure that Garmin Express is not running,
+because it will attach to the ANT+ stick and prevent `ant-plus` from doing so.
+
 ## Install
 
 ```sh
@@ -72,13 +80,19 @@ if (!stick.open()) {
 
 ## Important notes
 
-* never attach a sensor before receiveing the startup event
+* never attach a sensor before receiving the startup event
 * never attach a new sensor before receiving the attached or detached event of the previous sensor
 * never detach a sensor before receiving the attached or detached event of the previous sensor
 
 ## Objects
 
 ### GarminStick2 and GarminStick3
+
+GarminStick2 is the driver for ANT+ sticks with a USB product ID of `0x1008`.
+As well as the old Garmin USB2 ANT+ stick, this works with many of the common off-brand clones.
+
+GarminStick3 is the driver for the mini Garmin ANT+ stick
+which has a USB product ID of `0x1009`.
 
 #### properties
 
@@ -98,8 +112,8 @@ Tries to open the stick. Returns false on failure.
 
 ##### openAsync(callback)
 
-Tries to open the stick, waiting for it if not available right now. Returns a cancelation token with a method `cancel` you can use to stop waiting.
-`callback` is a funcion accepting a single `Error` parameter and it will be called when the stick is open (with the parameter undefined) or in case of failure (with the parameter set to the error).
+Tries to open the stick, waiting for it if not available right now. Returns a cancellation token with a method `cancel` you can use to stop waiting.
+`callback` is a function accepting a single `Error` parameter and it will be called when the stick is open (with the parameter undefined) or in case of failure (with the parameter set to the error).
 
 ##### close()
 
@@ -173,17 +187,17 @@ Fired when new heartbeat data is received.
 
 #### setWheelCircumference(circumferenceInMeters)
 
-Calibrates the speed sensor. Defaults to a wheel with diameter of 70cm (= 2.199)
+Calibrates the speed sensor. Defaults to a wheel with diameter of 70cm (= 2.199).
 
 #### events
 
 ##### speedData
 
-Fired when a new wheel speed is calculated
+Fired when a new wheel speed is calculated.
 
 ##### cadenceData
 
-Fired when a new pedal cadence is calculated
+Fired when a new pedal cadence is calculated.
 
 ### StrideSpeedDistance
 
@@ -208,3 +222,14 @@ Fired when new power has been calculated.
 ##### fitnessData
 
 Fired when new data is received.
+
+### Environment
+
+#### events
+
+##### envData
+
+Fired when data is received.
+
+The `state.EventCount` value can be used to tell when a new measurement has been made by the sensor -
+it's value will have been incremented.
