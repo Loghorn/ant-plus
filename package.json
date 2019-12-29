@@ -3,7 +3,7 @@
 	"version": "0.1.25",
 	"description": "A node module for ANT+",
 	"main": "ant-plus.js",
-	"typings": "types/ant-plus.d.ts",
+	"typings": "ant-plus.d.ts",
 	"scripts": {
 		"test": "echo \"Error: no test specified\" && exit 1",
 		"prepare": "tsc"
@@ -29,7 +29,7 @@
 		"@types/usb": "^1.5.1"
 	},
 	"files": [
-		"ant-plus.js",
+		"ant-plus.ts",
 		"src/",
 		"build/"
 	],
