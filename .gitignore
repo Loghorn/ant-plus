@@ -32,6 +32,7 @@ build
 # Typescript typings
 typings
 
-# VS Code settings
+# VS Code & IDEA settings
 .settings
 .vscode
+.idea
