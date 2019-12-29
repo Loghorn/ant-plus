@@ -4,6 +4,7 @@
 		"module": "commonjs",
 		"sourceMap": true,
 		"outDir": "build",
-		"declaration": true
+		"declaration": true,
+		"declarationDir": "./build/types"
 	}
 }
