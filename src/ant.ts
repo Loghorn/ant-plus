@@ -711,6 +711,8 @@ export abstract class BaseSensor extends events.EventEmitter {
 								this.write(this.msgQueue[0].msg);
 							}
 							return true;
+						case Constants.EVENT_CHANNEL_COLLISION:
+							return true; // collision is not an error on multi-channel networks
 						default:
 							break;
 					}
