@@ -8,7 +8,12 @@ Libusb is included as a submodule. On Linux, you'll need libudev to build libusb
 
 ### Windows
 
-Use [Zadig](http://sourceforge.net/projects/libwdi/files/zadig/) to install the WinUSB driver for your USB device. Otherwise you will get `LIBUSB_ERROR_NOT_SUPPORTED` when attempting to open devices.
+Use [Zadig](https://zadig.akeo.ie//) to install the WinUSB driver for your USB device, otherwise you will get `LIBUSB_ERROR_NOT_SUPPORTED` when attempting to open devices.
+- Install app from [Zadig](https://zadig.akeo.ie//)
+- Ensure device is plugged in and run Zadig
+- Select options -> list all devices to populate devices
+- Select your device and WinUSB driver
+- Press the 'Replace Driver' button and wait
 
 ### macOS
 
