@@ -1,44 +1,58 @@
 {
-	"name": "ant-plus",
-	"version": "0.1.25",
-	"description": "A node module for ANT+",
-	"main": "ant-plus.js",
-	"scripts": {
-		"test": "echo \"Error: no test specified\" && exit 1",
-		"prepare": "tsc"
-	},
-	"keywords": [
-		"ANT",
-		"ANT+"
-	],
-	"author": {
-		"name": "Alessandro Vergani",
-		"email": "alessandro.vergani@gmail.com"
-	},
-	"license": "MIT",
-	"engines": {
-		"node": ">=6.0.0"
-	},
-	"dependencies": {
-		"usb": "^1.6.0"
-	},
-	"devDependencies": {
-		"typescript": "^3.6.4",
-		"@types/node": "^6.0.0",
-		"@types/usb": "^1.5.1"
-	},
-	"files": [
-		"ant-plus.js",
-		"src/",
-		"build/"
-	],
-	"directories": {
-		"example": "./sample",
-		"lib": "./src"
-	},
-	"repository": {
-		"type": "git",
-		"url": "https://github.com/loghorn/ant-plus.git"
-	},
-	"bugs": "https://github.com/Loghorn/ant-plus/issues"
+  "name": "web-ant-plus",
+  "version": "1.0.1",
+  "description": "A package for ANT+ on Web browsers.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "directories": {
+    "lib": "src",
+    "example": "example"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "rimraf ./dist && tsc",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "vite ./example",
+    "preview": "vite preview  ./example"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/8beeeaaat/web-ant-plus.git"
+  },
+  "keywords": [
+    "ANT+",
+    "ant-plus",
+    "ant plus",
+    "Garmin"
+  ],
+  "author": "8beeeaaat",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/8beeeaaat/web-ant-plus/issues"
+  },
+  "homepage": "https://github.com/8beeeaaat/web-ant-plus#readme",
+  "workspaces": [
+    "example"
+  ],
+  "devDependencies": {
+    "@types/react": "^18.0.24",
+    "@types/react-dom": "^18.0.8",
+    "@types/w3c-web-usb": "^1.0.6",
+    "@typescript-eslint/eslint-plugin": "^5.42.1",
+    "@vitejs/plugin-react": "^2.2.0",
+    "eslint": "^8.27.0",
+    "eslint-config-airbnb": "^19.0.4",
+    "eslint-config-prettier": "^8.5.0",
+    "eslint-plugin-import": "^2.26.0",
+    "prettier": "^2.7.1",
+    "typescript": "^4.6.4",
+    "vite": "^3.2.3"
+  },
+  "dependencies": {
+    "@js-temporal/polyfill": "^0.4.3",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  }
 }

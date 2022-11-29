@@ -1,88 +1,73 @@
-# ant-plus
+# web-ant-plus
 
-A node.js module for ANT+
+A package for ANT+ on Web browsers.
 
-## Prerequisites
+This repository was based on [ant-plus the original module for Node.js](https://github.com/Loghorn/ant-plus) by [@Loghorn](https://github.com/Loghorn).
 
-Libusb is included as a submodule. On Linux, you'll need libudev to build libusb. On Ubuntu/Debian: `sudo apt-get install build-essential libudev-dev`
+📝 This package uses the [WebUSB API](https://developer.mozilla.org/en-US/docs/Web/API/WebUSB_API). This API is [not available in some browsers](https://developer.mozilla.org/en-US/docs/Web/API/USB#browser_compatibility), so requires handling.
 
-### Windows
-
-Use [Zadig](http://sourceforge.net/projects/libwdi/files/zadig/) to install the WinUSB driver for your USB device. Otherwise you will get `LIBUSB_ERROR_NOT_SUPPORTED` when attempting to open devices.
-
-### macOS
-
-On macOS (tested on High Sierra and Mojave), installing `ant-plus` will also
-install the required `libusb`.
-
-Make sure that Garmin Express is not running,
-because it will attach to the ANT+ stick and prevent `ant-plus` from doing so.
-
-## Install
+## How to use
 
 ```sh
-npm install ant-plus
-```
-
-## usage
-
-```javascript
-var Ant = require('ant-plus');
+npm install web-ant-plus
 ```
 
 #### Create USB stick
 
-```javascript
-var stick = new Ant.GarminStick3;
+```typescript
+import { GarminStick3 } from 'web-ant-plus';
+const stick = new GarminStick3();
 ```
 
 #### Create sensors
 
-```javascript
-var sensor = new Ant.HeartRateSensor(stick);
+```typescript
+const hrSensor = new HeartRateSensor(stick);
 ```
 
 #### Attach events
 
-```javascript
-sensor.on('hbData', function (data) {
-    console.log(data.DeviceID, data.ComputedHeartRate);
+```typescript
+hrSensor.on('hbData', function (data: HeartRateSensorState) {
+  console.log(data.DeviceID, data.ComputedHeartRate);
 });
 
 stick.on('startup', function () {
-    sensor.attach(0, 0);
+  hrSensor.attach(0, 0);
 });
 ```
 
 #### Open stick
 
-```javascript
+```typescript
 if (!stick.open()) {
-    console.log('Stick not found!');
+  console.log('Stick not found!');
 }
 ```
 
 ### scanning
 
-```javascript
-sensor.on('hbData', function (data) {
-    console.log(data.DeviceID, data.ComputedHeartRate);
+```typescript
+const hrScanner = new HeartRateScanner(stick);
+
+hrScanner.on('hbData', function (data: HeartRateSensorState) {
+  console.log(data.DeviceID, data.ComputedHeartRate);
 });
 
 stick.on('startup', function () {
-    sensor.scan();
-);
+  hrScanner.scan();
+});
 
 if (!stick.open()) {
-    console.log('Stick not found!');
+  console.log('Stick not found!');
 }
 ```
 
 ## Important notes
 
-* never attach a sensor before receiving the startup event
-* never attach a new sensor before receiving the attached or detached event of the previous sensor
-* never detach a sensor before receiving the attached or detached event of the previous sensor
+- never attach a sensor before receiving the startup event
+- never attach a new sensor before receiving the attached or detached event of the previous sensor
+- never detach a sensor before receiving the attached or detached event of the previous sensor
 
 ## Objects
 
@@ -133,7 +118,7 @@ Fired after the stick is correctly closed.
 
 #### methods
 
-##### attach(channel, deviceId)
+##### attach(channel: number, deviceID: number)
 
 Attaches the sensors, using the specified channel and deviceId (use 0 to connect to the first device found).
 
@@ -233,3 +218,9 @@ Fired when data is received.
 
 The `state.EventCount` value can be used to tell when a new measurement has been made by the sensor -
 it's value will have been incremented.
+
+```
+This software is subject to the ANT+ Shared Source License www.thisisant.com/swlicenses
+Copyright (c) Garmin Canada Inc. 2018
+All rights reserved.
+```
