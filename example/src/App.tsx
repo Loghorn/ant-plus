@@ -1,34 +1,31 @@
 import { useEffect, useState } from 'react';
+import {
+  BicyclePowerSensor,
+  GarminStick3,
+  HeartRateSensor,
+  SpeedCadenceSensor,
+} from '../../src';
 import { Constants } from '../../src/Constants';
 import { GarminStick2 } from '../../src/GarminStick2';
 import { Messages } from '../../src/Messages';
-import { BicyclePowerSensor } from '../../src/sensors/BicyclePowerSensor';
 import { BicyclePowerSensorState } from '../../src/sensors/BicyclePowerSensorState';
-import { HeartRateSensor } from '../../src/sensors/HeartRateSensor';
 import { HeartRateSensorState } from '../../src/sensors/HeartRateSensorState';
-import { SpeedCadenceSensor } from '../../src/sensors/SpeedCadenceSensor';
 import { SpeedCadenceSensorState } from '../../src/sensors/SpeedCadenceSensorState';
 import './App.css';
 import reactLogo from './assets/react.svg';
 
+// choose the stick type you want to use
+const STICK: typeof GarminStick2 | typeof GarminStick3 = GarminStick2;
+
 function App() {
-  const stick = new GarminStick2();
-  const hrSensor = new HeartRateSensor(stick);
-  const speedCadenceSensor = new SpeedCadenceSensor(stick);
-  speedCadenceSensor.setWheelCircumference(2.12);
-  const bicyclePowerSensor = new BicyclePowerSensor(stick);
-  stick.on('startup', async () => {
-    try {
-      console.log('Stick startup');
-      await hrSensor.attachSensor(0, 0);
-      await speedCadenceSensor.attachSensor(1, 0);
-      await bicyclePowerSensor.attachSensor(2, 0);
-      setConnected(true);
-    } catch (error) {
-      console.error(error);
-    }
-  });
-  const [connected, setConnected] = useState(stick.isScanning());
+  const [stick, setStick] = useState<GarminStick2 | GarminStick3>();
+  const [heartRateSensor, setHeartRateSensor] = useState<HeartRateSensor>();
+  const [speedCadenceSensor, setSpeedCadenceSensor] =
+    useState<SpeedCadenceSensor>();
+  const [bicyclePowerSensor, setBicyclePowerSensor] =
+    useState<BicyclePowerSensor>();
+
+  const [connected, setConnected] = useState(stick?.isScanning());
   const [heartbeat, setHeartbeat] = useState(0);
   const [hrState, setHRState] = useState<Array<HeartRateSensorState>>([]);
   const [speedState, setSpeedState] = useState<Array<SpeedCadenceSensorState>>(
@@ -38,36 +35,56 @@ function App() {
     []
   );
 
-  const newestHRState = hrState.length
-    ? hrState[hrState.length - 1]
-    : undefined;
-  const newestSpeedState = speedState.length
-    ? speedState[speedState.length - 1]
-    : undefined;
-
-  const newestPowerState = powerState.length
-    ? powerState[powerState.length - 1]
-    : undefined;
-
-  const sumComputedHeartRate = hrState.reduce<number>((sum, state) => {
-    if (state && state.ComputedHeartRate) {
-      return sum + state.ComputedHeartRate / 2;
+  useEffect(() => {
+    if (!stick) {
+      setStick(new STICK());
+      return;
     }
-    return sum;
-  }, 0);
+    if (heartRateSensor) {
+      heartRateSensor.on('attached', () =>
+        console.log('heartRateSensor attached')
+      );
+      heartRateSensor.on('detached', () =>
+        console.log('heartRateSensor detached')
+      );
 
-  const sumCalculatedCadence = powerState.reduce<number>((sum, state) => {
-    if (state && state.Cadence) {
-      return sum + state.Cadence / 3;
+      heartRateSensor.on('hbData', onHeartRateData);
+    } else {
+      setHeartRateSensor(new HeartRateSensor(stick));
     }
-    return sum;
-  }, 0);
+    if (speedCadenceSensor) {
+      speedCadenceSensor.on('attached', () =>
+        console.log('speedCadenceSensor attached')
+      );
+      speedCadenceSensor.on('detached', () =>
+        console.log('speedCadenceSensor detached')
+      );
+      speedCadenceSensor.setWheelCircumference(2.12);
+
+      speedCadenceSensor.on('speedData', onSpeedData);
+    } else {
+      setSpeedCadenceSensor(new SpeedCadenceSensor(stick));
+    }
+
+    if (bicyclePowerSensor) {
+      bicyclePowerSensor.on('attached', () =>
+        console.log('bicyclePowerSensor attached')
+      );
+      bicyclePowerSensor.on('detached', () =>
+        console.log('bicyclePowerSensor detached')
+      );
+
+      bicyclePowerSensor.on('powerData', onBicyclePowerData);
+    } else {
+      setBicyclePowerSensor(new BicyclePowerSensor(stick));
+    }
+  }, [stick, heartRateSensor, speedCadenceSensor, bicyclePowerSensor]);
 
   useEffect(() => {
     if (heartbeat > 0) {
       return;
     }
-    stick.write(Messages.requestMessage(0, Constants.MESSAGE_TX_SYNC));
+    stick?.write(Messages.requestMessage(0, Constants.MESSAGE_TX_SYNC));
     setHeartbeat(0);
   }, [heartbeat]);
 
@@ -89,15 +106,31 @@ function App() {
     setHeartbeat((prev) => prev + 1);
   };
 
-  function handleClickSearchDevice() {
+  async function handleClickSearchDevice() {
     console.log('searching...');
     try {
-      (async () => {
-        hrSensor.on('hbData', onHeartRateData);
-        speedCadenceSensor.on('speedData', onSpeedData);
-        bicyclePowerSensor.on('powerData', onBicyclePowerData);
-        await stick.open();
-      })();
+      if (!stick) {
+        throw new Error('stick not found');
+      }
+      stick.once('startup', async () => {
+        try {
+          console.log('Stick startup', stick);
+          heartRateSensor ? await heartRateSensor.attachSensor(0, 0) : null;
+          speedCadenceSensor
+            ? await speedCadenceSensor.attachSensor(1, 0)
+            : null;
+          bicyclePowerSensor
+            ? await bicyclePowerSensor.attachSensor(2, 0)
+            : null;
+          setConnected(true);
+        } catch (error) {
+          throw error;
+        }
+      });
+      stick.once('shutdown', async () => {
+        console.log('Stick shutdown');
+      });
+      await stick.open();
     } catch (error) {
       console.error(error);
     }
@@ -107,7 +140,8 @@ function App() {
     console.log('closing...');
     try {
       (async () => {
-        const close = await stick.reset();
+        const close = await stick?.reset();
+        await stick?.close();
         console.log('close', close);
       })();
       setConnected(false);
@@ -119,6 +153,24 @@ function App() {
   function meterPerSecToKmPerHour(mps: number) {
     return mps * 3.6;
   }
+
+  const newestHRState = hrState.length
+    ? hrState[hrState.length - 1]
+    : undefined;
+  const newestSpeedState = speedState.length
+    ? speedState[speedState.length - 1]
+    : undefined;
+
+  const newestPowerState = powerState.length
+    ? powerState[powerState.length - 1]
+    : undefined;
+
+  const sumCalculatedCadence = powerState.reduce<number>((sum, state) => {
+    if (state && state.Cadence) {
+      return sum + state.Cadence / 3;
+    }
+    return sum;
+  }, 0);
 
   return (
     <div className='App'>

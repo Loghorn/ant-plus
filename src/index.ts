@@ -1,7 +1,7 @@
 export { Constants } from './Constants';
 export { GarminStick2 } from './GarminStick2';
 export { GarminStick3 } from './GarminStick3';
-export { ICancellationToken } from './ICancellationToken';
+export type { ICancellationToken } from './ICancellationToken';
 export { Messages } from './Messages';
 export { AntPlusBaseSensor } from './sensors/AntPlusBaseSensor';
 export { AntPlusScanner } from './sensors/AntPlusScanner';

@@ -239,6 +239,7 @@ export abstract class BaseSensor extends EventEmitter {
     if (!this.stick.detach(this)) {
       throw 'error detaching';
     }
+    this.channel = undefined;
   }
 
   protected async write(data: DataView) {
