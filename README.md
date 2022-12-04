@@ -4,10 +4,9 @@ A package for ANT+ on Web browsers.
 
 [![demo clip](https://user-images.githubusercontent.com/4495546/205473639-220061d6-4f0d-4929-9890-2f3dc28af2c7.png)](https://www.youtube.com/watch?v=3XKP9zcMnw8)
 
-
 This repository was based on [ant-plus the original module for Node.js](https://github.com/Loghorn/ant-plus) by [@Loghorn](https://github.com/Loghorn).
 
-📝 This package uses the [WebUSB API](https://developer.mozilla.org/en-US/docs/Web/API/WebUSB_API). This API is [not available in some browsers](https://developer.mozilla.org/en-US/docs/Web/API/USB#browser_compatibility), so requires handling.
+📝 This package uses the [WebUSB API](https://developer.mozilla.org/en-US/docs/Web/API/WebUSB_API). This API is [not available in some browsers](https://developer.mozilla.org/en-US/docs/Web/API/USB#browser_compatibility).
 
 ## How to use
 
@@ -15,7 +14,7 @@ This repository was based on [ant-plus the original module for Node.js](https://
 npm install web-ant-plus
 ```
 
-#### Create USB stick
+#### Create USB stick GarminStick2 or GarminStick3
 
 ```typescript
 import { GarminStick3 } from 'web-ant-plus';
@@ -84,90 +83,89 @@ which has a USB product ID of `0x1009`.
 
 #### properties
 
-##### maxChannels
+- maxChannels
 
-The maximum number of channels that this stick supports; valid only after startup event fired.
+  - The maximum number of channels that this stick supports; valid only after startup event fired.
 
 #### methods
 
-##### is_present()
+- is_present()
 
-Checks if the stick is present. Returns true if it is, false otherwise.
+  - Checks if the stick is present. Returns true if it is, false otherwise.
 
-##### open()
+- open()
 
-Tries to open the stick. Returns false on failure.
+  - Tries to open the stick. Returns false on failure.
 
-##### openAsync(callback)
+- close()
 
-Tries to open the stick, waiting for it if not available right now. Returns a cancellation token with a method `cancel` you can use to stop waiting.
-`callback` is a function accepting a single `Error` parameter and it will be called when the stick is open (with the parameter undefined) or in case of failure (with the parameter set to the error).
+  - Closes the stick.
 
-##### close()
+- reset()
 
-Closes the stick.
+  - Reset the stick and detach all sensors;
 
 #### events
 
-##### startup
+- startup
 
-Fired after the stick is correctly initialized.
+  - Fired after the stick is correctly initialized.
 
-##### shutdown
+- shutdown
 
-Fired after the stick is correctly closed.
+  - Fired after the stick is correctly closed.
 
 ### Common to all Sensors
 
 #### methods
 
-##### attach(channel: number, deviceID: number)
+- attach(channel: number, deviceID: number)
 
-Attaches the sensors, using the specified channel and deviceId (use 0 to connect to the first device found).
+  - Attaches the sensors, using the specified channel and deviceId (use 0 to connect to the first device found).
 
-##### detach()
+- detach()
 
-Detaches the sensor.
+  - Detaches the sensor.
 
 #### events
 
-##### attached
+- attached
 
-Fired after the sensor is correctly attached.
+  - Fired after the sensor is correctly attached.
 
-##### detached
+- detached
 
-Fired after the sensor is correctly detached.
+  - Fired after the sensor is correctly detached.
 
 ### Common to all Scanners
 
 #### methods
 
-##### scan()
+- scan()
 
-Attaches the sensors and starts scanning for data from every devices in range.
+  - Attaches the sensors and starts scanning for data from every devices in range.
 
-##### detach()
+- detach()
 
-Detaches the sensor.
+  - Detaches the sensor.
 
 #### events
 
-##### attached
+- attached
 
-Fired after the sensor is correctly attached.
+  - Fired after the sensor is correctly attached.
 
-##### detached
+- detached
 
-Fired after the sensor is correctly detached.
+  - Fired after the sensor is correctly detached.
 
 ### HeartRate
 
 #### events
 
-##### hbData
+- hbData
 
-Fired when new heartbeat data is received.
+  - Fired when new heartbeat data is received.
 
 ### SpeedCadence
 
@@ -179,48 +177,47 @@ Calibrates the speed sensor. Defaults to a wheel with diameter of 70cm (= 2.199)
 
 #### events
 
-##### speedData
+- speedData
 
-Fired when a new wheel speed is calculated.
+  - Fired when a new wheel speed is calculated.
 
-##### cadenceData
+- cadenceData
 
-Fired when a new pedal cadence is calculated.
+  - Fired when a new pedal cadence is calculated.
 
 ### StrideSpeedDistance
 
 #### events
 
-##### ssdData
+- ssdData
 
-Fired when new data been calculated.
+  - Fired when new data been calculated.
 
 ### BicyclePower
 
 #### events
 
-##### powerData
+- powerData
 
-Fired when new power has been calculated.
+  - Fired when new power has been calculated.
 
 ### FitnessEquipment
 
 #### events
 
-##### fitnessData
+- fitnessData
 
-Fired when new data is received.
+  - Fired when new data is received.
 
 ### Environment
 
 #### events
 
-##### envData
+- envData
 
-Fired when data is received.
-
-The `state.EventCount` value can be used to tell when a new measurement has been made by the sensor -
-it's value will have been incremented.
+  - Fired when data is received.
+  - The `state.EventCount` value can be used to tell when a new measurement has been made by the sensor -
+    it's value will have been incremented.
 
 ```
 This software is subject to the ANT+ Shared Source License www.thisisant.com/swlicenses

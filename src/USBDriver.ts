@@ -4,7 +4,7 @@ import { Messages } from './Messages';
 import { BaseSensor } from './sensors/BaseSensor';
 
 export class USBDriver extends EventEmitter {
-  private static deviceInUse: USBDevice[] = [];
+  private deviceInUse: USBDevice[] = [];
   private attachedSensors: BaseSensor[] = [];
   private device: USBDevice | undefined;
   private inEndpoint: USBEndpoint | undefined;
@@ -34,7 +34,6 @@ export class USBDriver extends EventEmitter {
   }
 
   public async open(): Promise<USBDevice | undefined> {
-    this.reset();
     this.device = await this.getDevice();
     try {
       if (this.device === undefined) {
@@ -47,14 +46,9 @@ export class USBDriver extends EventEmitter {
       this.interface = this.device.configuration?.interfaces[0];
       await this.device.claimInterface(this.interface.interfaceNumber);
     } catch (err) {
-      console.error(err);
-      this.reset();
+      throw err;
     }
-    if (!this.device) {
-      return;
-    }
-    USBDriver.deviceInUse.push(this.device);
-
+    this.deviceInUse.push(this.device);
     this.inEndpoint = this.interface?.alternate.endpoints.find(
       (e) => e.direction === 'in'
     );
@@ -65,9 +59,14 @@ export class USBDriver extends EventEmitter {
     if (!this.inEndpoint || !this.outEndpoint) {
       throw new Error('No endpoints found');
     }
+    await this.reset();
 
     const readInEndPoint = async () => {
-      if (this.inEndpoint === undefined || this.device === undefined) {
+      if (
+        this.inEndpoint === undefined ||
+        this.device === undefined ||
+        !this.device.opened
+      ) {
         return;
       }
 
@@ -113,19 +112,33 @@ export class USBDriver extends EventEmitter {
             beginBlock = endBlock;
           }
         }
-        readInEndPoint();
+        await readInEndPoint();
       } catch (error) {
-        console.error(error);
+        throw error;
       }
     };
 
-    readInEndPoint();
-    await this.reset();
+    await readInEndPoint();
     return this.device;
+  }
+
+  public async close() {
+    await this.reset();
+    this.interface = undefined;
+    if (!this.device) return;
+    this.device.close();
+    this.emit('shutdown');
+    const devIdx = this.deviceInUse.indexOf(this.device);
+    if (devIdx >= 0) {
+      this.deviceInUse.splice(devIdx, 1);
+    }
+    this.emit('attach', this.device);
+    this.device = undefined;
   }
 
   public async reset() {
     await this.detach_all();
+    await this.device?.reset();
     this.maxChannels = 0;
     this.usedChannels = 0;
     await this.write(Messages.resetSystem());
@@ -178,10 +191,9 @@ export class USBDriver extends EventEmitter {
       if (this.outEndpoint === undefined) {
         throw new Error('No out endpoint');
       }
-
       await this.device?.transferOut(this.outEndpoint?.endpointNumber, data);
     } catch (error) {
-      console.error(error);
+      throw error;
     }
   }
 
