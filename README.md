@@ -2,6 +2,9 @@
 
 A package for ANT+ on Web browsers.
 
+[![demo clip](https://user-images.githubusercontent.com/4495546/205473639-220061d6-4f0d-4929-9890-2f3dc28af2c7.png)](https://www.youtube.com/watch?v=3XKP9zcMnw8)
+
+
 This repository was based on [ant-plus the original module for Node.js](https://github.com/Loghorn/ant-plus) by [@Loghorn](https://github.com/Loghorn).
 
 📝 This package uses the [WebUSB API](https://developer.mozilla.org/en-US/docs/Web/API/WebUSB_API). This API is [not available in some browsers](https://developer.mozilla.org/en-US/docs/Web/API/USB#browser_compatibility), so requires handling.
