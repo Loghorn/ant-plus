@@ -39,7 +39,7 @@ export class MuscleOxygenSensor extends AntPlusSensor {
     if (this.channel === undefined) {
       throw new Error('MuscleOxygenSensor: not attached');
     }
-    const now = Date.now();
+    const now = new Date();
     const utc = Math.round(
       (now.getTime() - Date.UTC(1989, 11, 31, 0, 0, 0, 0)) / 1000
     );
