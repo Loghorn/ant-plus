@@ -36,6 +36,8 @@ export class EnvironmentSensorState {
 
   Temperature?: number;
 
+  ReceivedAt?: number;
+
   updateState(data: DataView): EnvironmentSensorState {
     const page = data.getUint8(Messages.BUFFER_INDEX_MSG_DATA);
     if (page === 1) {
@@ -43,6 +45,8 @@ export class EnvironmentSensorState {
       this.Temperature =
         data.getUint16(Messages.BUFFER_INDEX_MSG_DATA + 6, true) / 100;
     }
+
+    this.ReceivedAt = Date.now();
 
     return this;
   }

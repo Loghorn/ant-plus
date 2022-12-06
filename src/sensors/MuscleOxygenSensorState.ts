@@ -50,6 +50,8 @@ export class MuscleOxygenSensorState {
 
   BatteryStatus?: 'New' | 'Good' | 'Ok' | 'Low' | 'Critical' | 'Invalid';
 
+  ReceivedAt?: number;
+
   updateState(data: DataView): MuscleOxygenSensorState | undefined {
     const oldEventCount = this._EventCount || 0;
 
@@ -204,6 +206,8 @@ export class MuscleOxygenSensorState {
       default:
         return;
     }
+
+    this.ReceivedAt = Date.now();
     if (page !== 0x01 || this._EventCount !== oldEventCount) {
       return this;
     }
