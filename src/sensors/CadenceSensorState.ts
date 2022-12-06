@@ -36,6 +36,8 @@ export class CadenceSensorState {
 
   Motion?: boolean;
 
+  ReceivedAt?: number;
+
   updateState(data: DataView): CadenceSensorState {
     const TOGGLE_MASK = 0x80;
     const pageNum = data.getUint8(Messages.BUFFER_INDEX_MSG_DATA);
@@ -130,6 +132,8 @@ export class CadenceSensorState {
         this.CalculatedCadence = cadence;
       }
     }
+
+    this.ReceivedAt = Date.now();
 
     return this;
   }

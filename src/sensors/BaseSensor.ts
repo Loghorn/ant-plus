@@ -1,4 +1,3 @@
-import { Temporal } from '@js-temporal/polyfill';
 import { SendCallback } from '../ant';
 import { Constants } from '../Constants';
 import { EventEmitter } from '../lib/EventEmitter';
@@ -27,11 +26,7 @@ export abstract class BaseSensor extends EventEmitter {
     | ((status: { msg: number; code: number }) => Promise<boolean>)
     | undefined;
 
-  protected abstract updateState(
-    deviceId: number,
-    data: DataView,
-    UpdateAt: Temporal.ZonedDateTime
-  ): void;
+  protected abstract updateState(deviceId: number, data: DataView): void;
 
   constructor(private stick: USBDriver) {
     super();

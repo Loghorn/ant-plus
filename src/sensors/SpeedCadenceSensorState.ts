@@ -26,6 +26,8 @@ export class SpeedCadenceSensorState {
 
   CalculatedSpeed?: number;
 
+  ReceivedAt?: number;
+
   updateState(
     data: DataView,
     wheelCircumference: number
@@ -101,6 +103,8 @@ export class SpeedCadenceSensorState {
         speedDataChanged = true;
       }
     }
+
+    this.ReceivedAt = Date.now();
 
     return {
       updatedState: this,

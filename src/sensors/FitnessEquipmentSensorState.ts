@@ -96,6 +96,8 @@ export class FitnessEquipmentSensorState {
 
   PairedDevices: any[] = [];
 
+  ReceivedAt?: number;
+
   resetState() {
     delete this.ElapsedTime;
     delete this.Distance;
@@ -803,6 +805,8 @@ export class FitnessEquipmentSensorState {
       default:
         break;
     }
+
+    this.ReceivedAt = Date.now();
 
     return this;
   }

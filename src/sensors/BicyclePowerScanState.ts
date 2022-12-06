@@ -6,13 +6,7 @@
 import { BicyclePowerSensorState } from './BicyclePowerSensorState';
 
 export class BicyclePowerScanState extends BicyclePowerSensorState {
-  Rssi: number;
+  Rssi?: number;
 
-  Threshold: number;
-
-  constructor(deviceId: number) {
-    super(deviceId);
-    this.Rssi = 0;
-    this.Threshold = 0;
-  }
+  Threshold?: number;
 }

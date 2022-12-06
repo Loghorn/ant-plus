@@ -36,6 +36,8 @@ export class StrideSpeedDistanceSensorState {
 
   Calories?: number;
 
+  ReceivedAt?: number;
+
   updateState(data: DataView): StrideSpeedDistanceSensorState {
     const page = data.getUint8(Messages.BUFFER_INDEX_MSG_DATA);
     if (page === 1) {
@@ -66,6 +68,8 @@ export class StrideSpeedDistanceSensorState {
           break;
       }
     }
+
+    this.ReceivedAt = Date.now();
     return this;
   }
 }

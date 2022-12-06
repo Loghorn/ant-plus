@@ -40,6 +40,8 @@ export class BicyclePowerSensorState {
 
   CalculatedPower?: number;
 
+  ReceivedAt?: number;
+
   updateState(data: DataView): BicyclePowerSensorState {
     const page = data.getUint8(Messages.BUFFER_INDEX_MSG_DATA);
     switch (page) {
@@ -140,6 +142,8 @@ export class BicyclePowerSensorState {
       }
       default:
     }
+
+    this.ReceivedAt = Date.now();
 
     return this;
   }

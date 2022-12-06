@@ -1,4 +1,3 @@
-import { Temporal } from '@js-temporal/polyfill';
 import { Constants } from '../Constants';
 import { GarminStick2 } from '../GarminStick2';
 import { GarminStick3 } from '../GarminStick3';
@@ -68,7 +67,7 @@ export abstract class AntPlusScanner extends AntPlusBaseSensor {
       case Constants.MESSAGE_CHANNEL_BROADCAST_DATA:
       case Constants.MESSAGE_CHANNEL_ACKNOWLEDGED_DATA:
       case Constants.MESSAGE_CHANNEL_BURST_DATA:
-        this.updateState(deviceId, data, Temporal.Now.zonedDateTimeISO());
+        this.updateState(deviceId, data);
         break;
       default:
         break;

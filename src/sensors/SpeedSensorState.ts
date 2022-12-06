@@ -38,6 +38,8 @@ export class SpeedSensorState {
 
   Motion?: boolean;
 
+  ReceivedAt?: number;
+
   updateState(
     data: DataView,
     wheelCircumference: number
@@ -143,6 +145,7 @@ export class SpeedSensorState {
       const speed = (distance * 1024) / (speedEventTime - (oldSpeedTime || 0));
       if (!isNaN(speed)) {
         this.CalculatedSpeed = speed;
+        this.ReceivedAt = Date.now();
         return this;
       }
     }

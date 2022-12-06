@@ -49,6 +49,8 @@ export class HeartRateSensorState {
 
   BatteryStatus?: 'New' | 'Good' | 'Ok' | 'Low' | 'Critical' | 'Invalid';
 
+  ReceivedAt?: number;
+
   updateState(data: DataView, page: Page): HeartRateSensorState {
     const TOGGLE_MASK = 0x80;
     const pageNum = data.getUint8(Messages.BUFFER_INDEX_MSG_DATA);
@@ -158,6 +160,8 @@ export class HeartRateSensorState {
       new DataView(data.buffer.slice(Messages.BUFFER_INDEX_MSG_DATA + 4))
     );
     page.oldPage = pageNum;
+
+    this.ReceivedAt = Date.now();
 
     return this;
   }
