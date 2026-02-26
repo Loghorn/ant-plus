@@ -17,15 +17,14 @@
 	},
 	"license": "MIT",
 	"engines": {
-		"node": ">=6.0.0"
+		"node": ">=16.0.0"
 	},
 	"dependencies": {
-		"usb": "^1.6.0"
+		"usb": "^2.17.0"
 	},
 	"devDependencies": {
-		"typescript": "^3.6.4",
-		"@types/node": "^6.0.0",
-		"@types/usb": "^1.5.1"
+		"typescript": "^5.0.0",
+		"@types/node": "^20.0.0"
 	},
 	"files": [
 		"ant-plus.js",
