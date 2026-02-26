@@ -1,6 +1,6 @@
 import events = require('events');
 
-import usb = require('usb');
+import { usb, Device, Interface, InEndpoint, OutEndpoint } from 'usb';
 
 export enum Constants {
 	MESSAGE_RF = 0x01,
@@ -297,7 +297,6 @@ class CancellationTokenListener {
 	cancel() {
 		if (!this._completed) {
 			this._completed = true;
-			// @ts-ignore
 			usb.removeListener('attach', this.fn);
 			this.cb(new Error('Canceled'));
 		}
@@ -305,12 +304,12 @@ class CancellationTokenListener {
 }
 
 export class USBDriver extends events.EventEmitter {
-	private static deviceInUse: usb.Device[] = [];
-	private device: usb.Device;
-	private iface: usb.Interface;
+	private static deviceInUse: Device[] = [];
+	private device: Device;
+	private iface: Interface;
 	private detachedKernelDriver = false;
-	private inEp: usb.InEndpoint & events.EventEmitter;
-	private outEp: usb.OutEndpoint & events.EventEmitter;
+	private inEp: InEndpoint & events.EventEmitter;
+	private outEp: OutEndpoint & events.EventEmitter;
 	private leftover: Buffer;
 	private usedChannels: number = 0;
 	private attachedSensors: BaseSensor[] = [];
@@ -364,7 +363,7 @@ export class USBDriver extends events.EventEmitter {
 		}
 		USBDriver.deviceInUse.push(this.device);
 
-		this.inEp = this.iface.endpoints[0] as usb.InEndpoint;
+		this.inEp = this.iface.endpoints[0] as InEndpoint;
 
 		this.inEp.on('data', (data: Buffer) => {
 			if (!data.length) {
@@ -409,7 +408,7 @@ export class USBDriver extends events.EventEmitter {
 
 		this.inEp.startPoll();
 
-		this.outEp = this.iface.endpoints[1] as usb.OutEndpoint;
+		this.outEp = this.iface.endpoints[1] as OutEndpoint;
 
 		this.reset();
 
@@ -439,14 +438,12 @@ export class USBDriver extends events.EventEmitter {
 		const fn = (d) => {
 			if (!d || (d.deviceDescriptor.idVendor === this.idVendor && d.deviceDescriptor.idProduct === this.idProduct)) {
 				if (doOpen()) {
-					// @ts-ignore
 					usb.removeListener('attach', fn);
 				}
 			}
 		};
 		usb.on('attach', fn);
 		if (this.is_present()) {
-			// @ts-ignore
 			setImmediate(() => usb.emit('attach', this.device));
 		}
 		return ct = new CancellationTokenListener(fn, cb);
@@ -473,9 +470,7 @@ export class USBDriver extends events.EventEmitter {
 					if (devIdx >= 0) {
 						USBDriver.deviceInUse.splice(devIdx, 1);
 					}
-					// @ts-ignore
 					if (usb.listenerCount('attach')) {
-						// @ts-ignore
 						usb.emit('attach', this.device);
 					}
 					this.device = undefined;
