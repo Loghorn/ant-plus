@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Added a best-effort `migrate:v2-to-v3` helper that rewrites common v2 API
+  usage and reports lifecycle code that still needs manual review.
+
 ## [3.0.0] - 2026-07-04
 
 ### Added
