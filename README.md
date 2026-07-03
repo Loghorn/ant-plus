@@ -12,6 +12,10 @@ This repository was based on [ant-plus the original module for Node.js](https://
 
 See [Migrating from v2](docs/migrating-from-v2.md).
 
+## Architecture
+
+See [Architecture](docs/architecture.md).
+
 ## How to use
 
 ```sh
