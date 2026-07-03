@@ -1,17 +1,22 @@
 {
-  "include": ["./src/**/*.ts", "src/index.ts"],
+  "include": ["src/**/*.ts"],
   "compilerOptions": {
-    "declaration": true,
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "lib": ["DOM", "ES2022"],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
-    "lib": ["DOM", "ESNext"],
-    "module": "ES6",
-    "moduleResolution": "node",
-    "outDir": "./dist",
     "skipLibCheck": true,
+    "declaration": true,
+    "declarationMap": true,
     "sourceMap": true,
-    "strict": true,
-    "target": "ES6",
-    "typeRoots": ["./node_modules/@types"]
+    "rootDir": "./src",
+    "outDir": "./dist",
+    "types": ["w3c-web-usb"]
   }
 }
