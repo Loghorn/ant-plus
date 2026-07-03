@@ -8,244 +8,178 @@ This repository was based on [ant-plus the original module for Node.js](https://
 
 📝 This package uses the [WebUSB API](https://developer.mozilla.org/en-US/docs/Web/API/WebUSB_API). This API is [not available in some browsers](https://developer.mozilla.org/en-US/docs/Web/API/USB#browser_compatibility).
 
+## Migrating from v2
+
+v3 is a full redesign. The main breaking changes:
+
+- ESM-only package with an `exports` map.
+- `GarminStick2` / `GarminStick3` classes are gone — use the `USBDriver` static factories (they filter for both stick models).
+- `stick.open()` now resolves once the stick is ready (after the startup handshake) instead of blocking until the stick is closed.
+- `sensor.attachSensor(channel, deviceID)` became `sensor.attach({ channel, deviceId })` and resolves once the channel is open.
+- All profile-specific events (`hbData`, `powerData`, `envData`, ...) are unified into a single typed `data` event.
+- State fields are camelCase and readonly (`ComputedHeartRate` → `computedHeartRate`); every `data` event delivers an immutable snapshot.
+- FitnessEquipment control commands return `Promise<boolean>` instead of taking callbacks.
+- Errors are `Error` subclasses (`AntPlusError`, `ChannelStateError`, `DeviceNotFoundError`, `ProtocolError`) instead of thrown strings.
+
 ## How to use
 
 ```sh
 npm install web-ant-plus
 ```
 
-### Create USB stick
-
-There are several ways to create a USB stick that can be used to start/create a sensor:
-
-#### Create a specific USB stick GarminStick2 or GarminStick3
+### Create a USB driver
 
 ```typescript
-import { GarminStick3 } from "web-ant-plus";
-const stick = new GarminStick3();
+import { USBDriver } from "web-ant-plus";
+
+// Open the browser pairing dialog (filtered to ANT+ sticks):
+const driver = await USBDriver.requestDevice();
+
+// ...or reuse an already paired stick (undefined if none):
+const paired = await USBDriver.fromPairedDevice();
+
+// ...or wrap a USBDevice you obtained yourself (no ANT+ check):
+const custom = USBDriver.fromDevice(usbDevice);
 ```
 
-#### Create USB stick from a new pairing
-
-This method will create a USBDriver (`stick`) from an ANT+ USB stick that has already been paired (i.e. will not open the dialog but rather filter for already paired usb devices). Please note that if more than one ANT+ stick was paired it will chose the first one.
+### Open the driver
 
 ```typescript
-const stick = USBDriver.createFromPairedDevice();
+await driver.open(); // resolves once the stick is ready
 ```
 
-#### Create USB stick from a specific USBDevice instance
-
-This method will create a USBDriver (`stick`) from a USBDevice instance. Please note that this does not do any checks whether USBDevice instance is in fact an ANT+ stick.
+### Create sensors and receive data
 
 ```typescript
-const stick = USBDriver.createFromDevice();
-```
+import { HeartRateSensor } from "web-ant-plus";
 
-#### Create USB stick from an already paired device
-
-This method will open a prompt to pair a usb device to connect to. Once connected it will return a USBDriver instance (`stick`)
-
-```typescript
-const stick = USBDriver.createFromNewDevice();
-```
-
-### Create sensors
-
-```typescript
-const hrSensor = new HeartRateSensor(stick);
-```
-
-#### Attach events
-
-```typescript
-hrSensor.on("hbData", function (data: HeartRateSensorState) {
-  console.log(data.DeviceID, data.ComputedHeartRate);
+const hrSensor = new HeartRateSensor(driver);
+hrSensor.on("data", (state) => {
+  console.log(state.deviceId, state.computedHeartRate);
 });
 
-stick.on("startup", function () {
-  hrSensor.attach(0, 0);
-});
+await hrSensor.attach({ channel: 0, deviceId: 0 }); // deviceId 0 = first device found
 ```
 
-#### Open stick
+### Scanning
+
+Scanners receive data from every device of one profile in range:
 
 ```typescript
-await stick.open();
+import { HeartRateScanner } from "web-ant-plus";
+
+const hrScanner = new HeartRateScanner(driver);
+hrScanner.on("data", (state) => {
+  console.log(state.deviceId, state.computedHeartRate, state.rssi);
+});
+
+await hrScanner.scan();
 ```
 
-Please note that the `open()` method will resolve the promise only once the stick is closed (or rejected due to an error). In this case it will return the underlying USBDevice instance. In practice this should mean that the `open()` method, if awaited, is blocking until the communication with stick terminates.
-
-### scanning
+### Close
 
 ```typescript
-const hrScanner = new HeartRateScanner(stick);
-
-hrScanner.on("hbData", function (data: HeartRateSensorState) {
-  console.log(data.DeviceID, data.ComputedHeartRate);
-});
-
-stick.on("startup", function () {
-  hrScanner.scan();
-});
-
-if (!stick.open()) {
-  console.log("Stick not found!");
-}
+await driver.close();
 ```
 
 ## Important notes
 
-- never attach a sensor before receiving the startup event
-- never attach a new sensor before receiving the attached or detached event of the previous sensor
-- never detach a sensor before receiving the attached or detached event of the previous sensor
+- never attach a sensor before `driver.open()` has resolved
+- attach sensors sequentially (`await` each `attach()` before the next)
 
 ## Objects
 
-### GarminStick2 and GarminStick3
+### USBDriver
 
-GarminStick2 is the driver for ANT+ sticks with a USB product ID of `0x1008`.
-As well as the old Garmin USB2 ANT+ stick, this works with many of the common off-brand clones.
+Drives ANT+ USB sticks with USB product IDs `0x1008` (Garmin USB2 and many off-brand clones) and `0x1009` (mini Garmin stick).
 
-GarminStick3 is the driver for the mini Garmin ANT+ stick
-which has a USB product ID of `0x1009`.
+#### static methods
+
+- `requestDevice()` — opens the browser pairing dialog filtered to supported sticks and resolves with a driver.
+- `fromPairedDevice()` — resolves with a driver for the first already-paired stick, or `undefined`.
+- `fromDevice(device)` — wraps a `USBDevice` without checking whether it is an ANT+ stick.
+- `getPairedDevices()` — resolves with the already-paired ANT+ `USBDevice`s.
 
 #### properties
 
-- maxChannels
-
-  - The maximum number of channels that this stick supports; valid only after startup event fired.
+- `maxChannels` — the maximum number of channels this stick supports; valid only after `open()` resolved.
+- `canScan` — whether the stick supports background scanning.
 
 #### methods
 
-- is_present()
-
-  - Checks if the stick is present. Returns true if it is, false otherwise.
-
-- open()
-
-  - Tries to open the stick. Returns a promise that resolves once the stick is closed (or the promise is rejected due to an error). In this case it will return the underlying USBDevice instance. In practice this should mean that the `open()` method if awaited is blocking until the communication with stick terminates.
-
-- close()
-
-  - Closes the stick.
-
-- reset()
-
-  - Reset the stick and detach all sensors;
+- `open()` — opens the device, performs the startup handshake and starts reading in the background. Resolves once sensors can attach.
+- `close()` — resets and closes the stick.
+- `reset()` — resets the stick and detaches all sensors.
 
 #### events
 
-- startup
-
-  - Fired after the stick is correctly initialized.
-
-- shutdown
-
-  - Fired after the stick is correctly closed.
+- `startup` — fired after the stick is correctly initialized.
+- `shutdown` — fired after the stick is correctly closed.
+- `error` — fired when the background read loop stops due to an error.
 
 ### Common to all Sensors
 
-#### Sensors methods
+#### methods
 
-- attach(channel: number, deviceID: number)
+- `attach({ channel, deviceId, transmissionType?, timeout? })` — attaches the sensor on the given channel (`deviceId: 0` connects to the first device found). Resolves once the channel is open.
+- `detach()` — detaches the sensor.
 
-  - Attaches the sensors, using the specified channel and deviceId (use 0 to connect to the first device found).
+#### properties
 
-- detach()
+- `state` — the latest decoded state snapshot, if any broadcast has been received.
 
-  - Detaches the sensor.
+#### events
 
-#### Sensors events
-
-- attached
-
-  - Fired after the sensor is correctly attached.
-
-- detached
-
-  - Fired after the sensor is correctly detached.
+- `data` — fired with an immutable state snapshot on every decoded broadcast.
+- `attached` / `detached` — fired after the sensor is attached / detached.
+- `eventData` — fired for unhandled channel events (`{ message, code }`).
 
 ### Common to all Scanners
 
-#### Scanners methods
+#### methods
 
-- scan()
+- `scan()` — opens the scanning channel and receives data from every device of the profile in range. Resolves once scanning starts.
+- `detach()` — stops scanning.
 
-  - Attaches the sensors and starts scanning for data from every devices in range.
+#### properties
 
-- detach()
+- `states` — a `ReadonlyMap<number, State>` with the latest state per device id.
 
-  - Detaches the sensor.
+#### events
 
-#### Scanners events
+- `data`, `attached`, `detached`, `eventData` — as for sensors. Scan states additionally carry `rssi` and `threshold`.
 
-- attached
+### Profiles
 
-  - Fired after the sensor is correctly attached.
+| Profile | Sensor / Scanner | State highlights |
+| --- | --- | --- |
+| HeartRate | `HeartRateSensor` / `HeartRateScanner` | `computedHeartRate`, `beatCount`, battery pages |
+| SpeedCadence | `SpeedCadenceSensor` / `SpeedCadenceScanner` | `calculatedSpeed`, `calculatedCadence`, `calculatedDistance` |
+| Speed | `SpeedSensor` / `SpeedScanner` | `calculatedSpeed`, `calculatedDistance` |
+| Cadence | `CadenceSensor` / `CadenceScanner` | `calculatedCadence` |
+| BicyclePower | `BicyclePowerSensor` / `BicyclePowerScanner` | `power`, `cadence`, `calculatedPower` |
+| FitnessEquipment | `FitnessEquipmentSensor` / `FitnessEquipmentScanner` | speed / cadence / power pages, equipment control |
+| Environment | `EnvironmentSensor` / `EnvironmentScanner` | `temperature`, `eventCount` |
+| MuscleOxygen | `MuscleOxygenSensor` / `MuscleOxygenScanner` | oxygen saturation pages, session commands |
+| StrideSpeedDistance | `StrideSpeedDistanceSensor` / `StrideSpeedDistanceScanner` | speed / distance / cadence of a foot pod |
 
-- detached
+Speed and SpeedCadence expose a `wheelCircumference` property (meters, default `2.199`) used for speed calculation.
 
-  - Fired after the sensor is correctly detached.
+FitnessEquipment control commands (all resolve with the acknowledged-transfer result):
 
-### HeartRate
+```typescript
+await feSensor.setBasicResistance(50);
+await feSensor.setTargetPower(200);
+await feSensor.setUserConfiguration({ userWeight: 70, bikeWeight: 10 });
+await feSensor.setWindResistance({ windCoeff: 0.51 });
+await feSensor.setTrackResistance({ slope: 2.5 });
+```
 
-#### HeartRate events
+MuscleOxygen session commands: `setUTCTime()`, `startSession()`, `stopSession()`, `setLap()`.
 
-- hbData
+### Decoders
 
-  - Fired when new heartbeat data is received.
-
-### SpeedCadence
-
-#### SpeedCadence methods
-
-#### setWheelCircumference(circumferenceInMeters)
-
-Calibrates the speed sensor. Defaults to a wheel with diameter of 70cm (= 2.199).
-
-#### SpeedCadence events
-
-- speedData
-
-  - Fired when a new wheel speed is calculated.
-
-- cadenceData
-
-  - Fired when a new pedal cadence is calculated.
-
-### StrideSpeedDistance
-
-#### StrideSpeedDistance events
-
-- ssdData
-
-  - Fired when new data been calculated.
-
-### BicyclePower
-
-#### BicyclePower events
-
-- powerData
-
-  - Fired when new power has been calculated.
-
-### FitnessEquipment
-
-#### FitnessEquipment events
-
-- fitnessData
-
-  - Fired when new data is received.
-
-### Environment
-
-#### Environment events
-
-- envData
-
-  - Fired when data is received.
-  - The `state.EventCount` value can be used to tell when a new measurement has been made by the sensor -
-    it's value will have been incremented.
+Every profile also exports its pure decoder (e.g. `decodeHeartRate(state, data, page)`), which turns a raw broadcast `DataView` into the next immutable state — useful for testing and replaying recorded data without any USB hardware.
 
 ```text
 This software is subject to the ANT+ Shared Source License www.thisisant.com/swlicenses
